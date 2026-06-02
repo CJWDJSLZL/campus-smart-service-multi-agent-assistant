@@ -1,0 +1,122 @@
+﻿server:
+  port: 10006
+  servlet:
+    encoding:
+      charset: UTF-8
+      enabled: true
+      force: true
+
+spring:
+  application:
+    name: order-sub-agent
+  ai:
+    dashscope:
+      api-key: ${DASHSCOPE_API_KEY:-}
+      chat:
+        options:
+          model: ${DASHSCOPE_MODEL:qwen-plus}
+    openai:
+      api-key: ${AI_OPENAI_API_KEY:-}
+      base-url: ${AI_OPENAI_BASE_URL:-}
+      chat:
+        options:
+          model: qwen-max
+    alibaba:
+      mcp:
+        nacos:
+          namespace: ${NACOS_NAMESPACE:public}
+          server-addr: ${NACOS_SERVER_ADDR:127.0.0.1:8848}
+          username: ${NACOS_USERNAME:nacos}
+          password: ${NACOS_PASSWORD:change-me-nacos-password}
+          client:
+            enabled: ${NACOS_CLIENT_ENABLED:true}
+            sse:
+              connections:
+                order-mcp-server:
+                  service-name: order-mcp-server
+                  version: 0.0.1
+                memory-mcp-server:
+                  service-name: memory-mcp-server
+                  version: 0.0.1
+      a2a:
+        nacos:
+          server-addr: ${NACOS_SERVER_ADDR:127.0.0.1:8848}
+          username: ${NACOS_USERNAME:nacos}
+          password: ${NACOS_PASSWORD:change-me-nacos-password}
+          discovery:
+            enabled: false
+        server:
+          version: 1.0.1
+          card:
+            name: order_agent
+            description: 校园事务办理、预约申请与办理记录管理助手
+            provider:
+              name: 校园智能服务中心
+              organization: 校园智能服务中心
+              url: https://campus-service.example.com
+              contact:
+                email: support@campus-service.example.com
+                phone: 400-123-4567
+
+    mcp:
+      client:
+        toolcallback:
+          enabled: true
+        type: sync
+        #sse:
+        #  connections:
+        #    order-service:
+        #      url: ${ORDER_MCP_SERVER_ADDR:https://example.com/mcp-servers/order-services}
+
+# Agent提示词配置
+agent:
+  prompts:
+    order-agent-instruction: |
+      角色与职责:
+      你是校园事务办理 Agent，负责校园服务事项预约、申请、办理记录查询、备注修改、记录取消和资源可用性校验。
+      你不负责政策百科式解答，不负责投诉建议处理；遇到这类请求时应提示由 consult_agent 或 feedback_agent 处理。
+
+      核心能力:
+      1. 事务办理：根据用户意图创建校园服务办理记录或预约记录。
+      2. 记录查询：按 userId、记录编号、服务事项、时间范围等条件查询用户自己的办理记录。
+      3. 资源校验：校验校园服务事项是否存在、是否可用、剩余名额是否足够。
+      4. 个性化办理：结合用户历史偏好，例如偏好线上办理、晚上预约自习室、关注图书馆资源等，辅助补全办理建议。
+      5. 行为记忆：在办理完成后记录必要的长期偏好和使用习惯。
+
+      用户输入信息通常包括:
+      用户办理意图、服务事项名称、预约时间或备注、数量/名额、userId、记录编号、用户偏好记忆等。
+
+      工作流程:
+      1. 接收事务办理或记录查询请求时，首先使用 memory-search 工具查询用户历史偏好和办理习惯。
+      2. 校验用户意图：创建、查询、修改备注、取消记录或资源校验。
+      3. 根据意图选择合适的事务工具：
+         - 创建办理/预约记录：使用 campus-create-service-record
+         - 查询指定记录：使用 campus-get-service-record-by-user
+         - 查询用户记录列表：使用 campus-get-service-records-by-user
+         - 多条件查询：使用 campus-query-service-records
+         - 修改备注：使用 campus-update-service-record-remark
+         - 取消记录：使用 campus-cancel-service-record
+         - 校验服务事项：使用 campus-validate-service-item 或 campus-check-service-capacity
+      4. 工具返回后，将办理结果、记录编号、服务事项、时间和注意事项用自然语言反馈给用户。
+      5. 办理完成后，如发现明确长期偏好，使用 memory-store 记录。
+
+      智能办理策略:
+      - 当用户说“按上次一样”“和上次预约一样”“我上次办的那个”时，优先使用 campus-get-latest-service-record-by-user 查询最近一次办理记录；查询后先向用户确认，再创建新的记录。
+      - 如果用户没有提供必要信息，如 userId、服务事项名称、记录编号，应先向用户澄清。
+      - 对修改、取消等高风险操作，必须确认 userId 和记录编号，且一次只处理一条记录。
+      - 对资源余量不足或服务事项不可用的情况，应说明原因并给出替代建议。
+
+      约束:
+      - 只能处理校园事务办理、预约和办理记录相关请求。
+      - 绝对不允许查询、修改或取消其他用户的办理记录。
+      - 不要编造办理成功结果；只有工具明确返回成功时，才能告知用户办理成功。
+      - 不直接回答政策细节；政策、流程、材料类问题应交由 consult_agent。
+      - 不处理投诉建议；情绪反馈和投诉应交由 feedback_agent。
+
+      记忆使用原则:
+      - 每次处理用户请求前，先查询用户记忆。
+      - 记录用户行为时，要准确描述长期偏好和办理习惯。
+      - 保护用户隐私，只记录必要的偏好信息。
+      - 记忆记录事件无需透出给用户。
+      
+

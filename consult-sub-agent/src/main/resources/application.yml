@@ -1,0 +1,164 @@
+﻿server:
+  port: 10005
+  servlet:
+    encoding:
+      charset: UTF-8
+      enabled: true
+      force: true
+
+spring:
+  application:
+    name: consult-sub-agent
+  main:
+    banner-mode: off
+  autoconfigure:
+    exclude:
+      - com.alibaba.cloud.ai.autoconfigure.dashscope.DashScopeImageAutoConfiguration
+      - com.alibaba.cloud.ai.autoconfigure.dashscope.DashScopeVideoAutoConfiguration
+  datasource:
+    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:multi-agent-demo}?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&useAffectedRows=true
+    username: ${DB_USERNAME:multi_agent_demo}
+    password: ${DB_PASSWORD:change-me-db-password}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  ai:
+    chat:
+      client:
+        observations:
+          log-prompt: true
+      observations:
+        log-prompt: true
+        log-completion: true
+    image:
+      observations:
+        log-prompt: true
+    vectorstore:
+      observations:
+        log-query-response: true
+    openai:
+      api-key: ${AI_OPENAI_API_KEY:-}
+      base-url: ${AI_OPENAI_BASE_URL:-}
+    dashscope:
+      api-key: ${DASHSCOPE_API_KEY:-}
+      # 文档检索配置
+      document-retrieval:
+        index-id: ${DASHSCOPE_INDEX_ID:-}
+        enable-reranking: ${DASHSCOPE_ENABLE_RERANKING:true}
+        rerank-top-n: ${DASHSCOPE_RERANK_TOP_N:2}
+        rerank-min-score: ${DASHSCOPE_RERANK_MIN_SCORE:0}
+    alibaba:
+      agent:
+        proxy:
+          nacos:
+            serverAddr: ${NACOS_SERVER_ADDR:127.0.0.1:8848}
+            username: ${NACOS_USERNAME:nacos}
+            password: ${NACOS_PASSWORD:change-me-nacos-password}
+            promptKey: ${PROMPT_KEY:consult-sub-agent-instruction}
+      arms:
+        enabled: true
+        tool:
+          enabled: true
+        model:
+          capture-input: true
+          capture-output: true
+      mcp:
+        nacos:
+          namespace: ${NACOS_NAMESPACE:public}
+          server-addr: ${NACOS_SERVER_ADDR:127.0.0.1:8848}
+          username: ${NACOS_USERNAME:nacos}
+          password: ${NACOS_PASSWORD:change-me-nacos-password}
+          client:
+            enabled: ${NACOS_CLIENT_ENABLED:true}
+            sse:
+              connections:
+                memory-mcp-server:
+                  service-name: memory-mcp-server
+                  version: 0.0.1
+      a2a:
+        nacos:
+          server-addr: ${NACOS_SERVER_ADDR:127.0.0.1:8848}
+          username: ${NACOS_USERNAME:nacos}
+          password: ${NACOS_PASSWORD:change-me-nacos-password}
+          discovery:
+            enabled: false
+        server:
+          card:
+            name: consult_agent
+            description: 校园政策、办事流程、通知公告与资源说明咨询助手
+            provider:
+              name: 校园智能服务中心
+              organization: 校园智能服务中心
+              url: https://campus-service.example.com
+              contact:
+                email: support@campus-service.example.com
+                phone: 400-123-4567
+
+    mcp:
+      client:
+        toolcallback:
+          enabled: true
+        type: sync
+
+# Agent提示词配置
+agent:
+  prompts:
+    consult-agent-instruction: |
+      角色与职责:
+      你是校园咨询 Agent，负责回答师生关于校园政策、办事流程、通知公告、校园资源、服务事项说明、常见问题等咨询类问题。
+      你不负责创建预约或办理记录，不负责修改/取消事务记录，不负责受理投诉和反馈落库。
+
+      核心能力:
+      1. 政策流程问答：根据知识库内容回答奖学金、证明办理、校园卡、宿舍报修、图书馆、场馆等政策和流程问题。
+      2. 服务事项说明：查询校园服务事项列表、服务详情、可用状态和基础说明。
+      3. 个性化咨询：结合用户历史偏好和关注点，给出更贴近用户需求的说明。
+      4. 偏好识别：从咨询中识别用户长期关注方向，如奖学金、竞赛、就业、图书馆、自习室、线上办理等。
+
+      用户输入信息通常包括:
+      政策问题、流程问题、服务事项咨询、通知公告咨询、资源说明咨询，以及用于个性化回答的用户偏好摘要。
+
+      工作流程:
+      1. 接收用户咨询时，首先使用 memory-search 工具查询用户历史偏好和咨询习惯。
+      2. 基于用户记忆和当前问题，优先使用 consult-search-knowledge 工具检索校园知识库。
+      3. 如果问题涉及可办理服务事项、资源状态或服务列表，使用 consult-get-products、consult-get-product-info 或 consult-search-products 查询结构化服务事项数据。
+      4. 结合用户偏好、知识库内容和服务事项数据，给出清晰、分步骤、可执行的回答。
+      5. 在对话过程中识别用户新的长期偏好，必要时使用 memory-store 工具记录。
+
+      回答策略:
+      - 优先基于知识库和工具结果回答，不要凭空编造校园政策、时间、地点或办理条件。
+      - 无法确认时，明确说明“不确定”并建议联系对应部门或补充信息。
+      - 对流程类问题尽量按“适用对象、办理条件、所需材料、办理步骤、注意事项”组织。
+      - 对服务事项类问题尽量说明服务名称、适用场景、可用状态、办理建议。
+
+      记忆使用原则:
+      - 每次回答用户问题前，先查询用户记忆。
+      - 只记录必要的长期偏好和关注点，不记录敏感隐私。
+      - 记忆记录事件无需透出给用户，不需要让用户感知到系统在进行个性化记忆。
+
+# MyBatis配置
+mybatis:
+  mapper-locations: classpath:mapper/*.xml
+  type-aliases-package: com.alibaba.cloud.ai.demo.entity
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+
+# Spring AI Alibaba Admin配置
+management:
+  otlp:
+    tracing:
+      export:
+        enabled: true
+      endpoint: ${ADMIN_OTLP_ENDPOINT:http://127.0.0.1:4318/v1/traces}
+    metrics:
+      export:
+        enabled: false
+    logging:
+      export:
+        enabled: false
+  tracing:
+    sampling:
+      probability: 1.0
+  opentelemetry:
+    resource-attributes:
+      service.name: consult-sub-agent
+      service.version: 1.0
+

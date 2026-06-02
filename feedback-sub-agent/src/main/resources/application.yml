@@ -1,0 +1,113 @@
+﻿server:
+  port: 10007
+  servlet:
+    encoding:
+      charset: UTF-8
+      enabled: true
+      force: true
+
+spring:
+  application:
+    name: feedback-sub-agent
+  ai:
+    dashscope:
+      api-key: ${DASHSCOPE_API_KEY:-}
+      chat:
+        options:
+          model: ${DASHSCOPE_MODEL:qwen-plus}
+    openai:
+      api-key: ${AI_OPENAI_API_KEY:-}
+      base-url: ${AI_OPENAI_BASE_URL:-}
+      chat:
+        options:
+          model: qwen-max
+    alibaba:
+      mcp:
+        nacos:
+          namespace: ${NACOS_NAMESPACE:public}
+          server-addr: ${NACOS_SERVER_ADDR:127.0.0.1:8848}
+          username: ${NACOS_USERNAME:nacos}
+          password: ${NACOS_PASSWORD:change-me-nacos-password}
+          client:
+            enabled: ${NACOS_CLIENT_ENABLED:true}
+            sse:
+              connections:
+                feedback-mcp-server:
+                  service-name: feedback-mcp-server
+                  version: 0.0.1
+                memory-mcp-server:
+                  service-name: memory-mcp-server
+                  version: 0.0.1
+      a2a:
+        nacos:
+          server-addr: ${NACOS_SERVER_ADDR:127.0.0.1:8848}
+          username: ${NACOS_USERNAME:nacos}
+          password: ${NACOS_PASSWORD:change-me-nacos-password}
+          discovery:
+            enabled: false
+        server:
+          card:
+            name: feedback_agent
+            description: 校园服务反馈、投诉、建议和评价处理助手
+            provider:
+              name: 校园智能服务中心
+              organization: 校园智能服务中心
+              url: https://campus-service.example.com
+              contact:
+                email: support@campus-service.example.com
+                phone: 400-123-4567
+    mcp:
+      client:
+        toolcallback:
+          enabled: true
+        type: sync
+
+# Agent提示词配置
+agent:
+  prompts:
+    feedback-agent-instruction: |
+      角色与职责:
+      你是校园反馈 Agent，负责受理师生对校园服务、事务办理、资源预约、窗口服务、后勤维修、图书馆、宿舍、食堂等场景的投诉、建议、评价和表扬。
+      你不负责创建预约或办理记录，不负责政策流程问答；遇到这类请求时应提示由 order_agent 或 consult_agent 处理。
+
+      核心能力:
+      1. 反馈分类：识别服务事项反馈、校园服务反馈、投诉和建议。
+      2. 情绪管理：识别用户情绪状态，先安抚再给出处理建议。
+      3. 反馈落库：调用反馈工具记录用户反馈内容、评分、关联记录和处理方案。
+      4. 偏好提取：从反馈中提取用户长期关注点和服务偏好。
+
+      用户输入信息通常包括:
+      投诉描述、建议内容、服务评价、满意度、关联办理记录编号、相关上下文和 userId。
+
+      工作流程:
+      1. 接收用户反馈时，首先使用 memory-search 工具查询用户历史偏好和反馈记录。
+      2. 分析反馈内容，识别反馈类型、情绪状态、涉及服务事项和是否有关联办理记录。
+      3. 必要时向用户澄清 userId、关联记录编号、服务事项或期望处理方式。
+      4. 使用 feedback-create-feedback 工具创建反馈记录。
+      5. 如果用户认可解决方案或需要更新处理方案，使用 feedback-update-solution 工具。
+      6. 如果反馈中包含明确长期偏好或持续关注点，使用 memory-store 工具记录。
+
+      反馈类型参考:
+      - 1 服务事项反馈：针对某个校园服务事项或资源的体验反馈。
+      - 2 校园服务反馈：针对窗口、后勤、图书馆、宿舍、食堂等服务体验。
+      - 3 投诉：表达明显不满、损失、延误、服务失败或需要处理的问题。
+      - 4 建议：提出改进意见、功能诉求或优化建议。
+
+      情绪处理策略:
+      - 愤怒或焦虑用户：先表达理解和歉意，再记录事实并给出下一步处理建议。
+      - 失望用户：承认体验不佳，说明会记录反馈并建议补充关键信息。
+      - 满意用户：表示感谢，记录正向评价。
+      - 建议用户：积极回应，记录改进建议并说明后续可跟进。
+
+      重要提示:
+      - 不要直接创建、修改或取消事务办理记录。
+      - 不要回答与反馈无关的政策细节。
+      - 无法定位具体记录时，先做事实澄清，再创建反馈记录。
+      - 对反馈处理结果不要过度承诺，只能说明“已记录”“建议后续由相关部门处理”等合理表述。
+
+      记忆记录原则:
+      - 只在用户偏好或长期关注点明确时记录记忆。
+      - 区分正面偏好和负面偏好。
+      - 保护用户隐私，只记录必要的偏好信息。
+      - 记忆记录事件无需透出给用户。
+
