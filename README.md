@@ -60,13 +60,12 @@
 - `AI_OPENAI_BASE_URL`
 - `AI_OPENAI_API_KEY`
 
-`.env` 已加入 `.gitignore`，不要提交到 GitHub。
 
 ### 2. 上传校园知识库
 
 将以下文件上传到阿里云百炼知识库，并把知识库 ID 配置到 `.env`：
 
-- `consult-sub-agent/src/main/resources/kownledge/brand-overview.md`
+- `consult-sub-agent/src/main/resources/kownledge/overview.md`
 - `consult-sub-agent/src/main/resources/kownledge/products.md`
 
 ### 3. 启动中间件
@@ -133,15 +132,6 @@ powershell -ExecutionPolicy Bypass -File .\start-frontend.ps1
 - `6379`：Redis。
 - `8848`：Nacos。
 
-## 注意事项
-
-- Agent 只负责理解、决策和组织回答，真正的参数校验和业务规则应放在 Service 层。
-- MCP Server 用于把业务能力封装成工具，降低 Agent 与数据库、Service 的耦合。
-- `products` 表在本项目中表示“校园服务事项”，`orders` 表表示“校园事务办理记录”，字段名保留是为了兼容原 Mapper。
-- Prompt 不是安全边界。取消记录、修改备注等操作需要在 Service 或后续鉴权层继续加强权限校验。
-- 如果前端发送失败，优先检查 `supervisor-agent` 是否启动成功，以及 `10008` 端口是否可访问。
-- 如果子 Agent 未监听端口，查看 `logs/*.err.log` 和 `logs/*.out.log`。
-- 上传 GitHub 前确认 `.env`、日志、数据库数据卷、证书、`node_modules`、`target` 目录没有被加入版本控制。
 
 ## 停止服务
 
