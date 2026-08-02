@@ -43,7 +43,7 @@ spring:
       document-retrieval:
         index-id: ${DASHSCOPE_INDEX_ID:-}
         enable-reranking: ${DASHSCOPE_ENABLE_RERANKING:true}
-        rerank-top-n: ${DASHSCOPE_RERANK_TOP_N:2}
+        rerank-top-n: ${DASHSCOPE_RERANK_TOP_N:3}
         rerank-min-score: ${DASHSCOPE_RERANK_MIN_SCORE:0}
     alibaba:
       agent:
