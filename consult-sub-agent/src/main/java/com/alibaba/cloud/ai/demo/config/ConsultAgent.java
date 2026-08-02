@@ -19,9 +19,13 @@ package com.alibaba.cloud.ai.demo.config;
 import com.alibaba.cloud.ai.agent.nacos.NacosAgentPromptBuilderFactory;
 import com.alibaba.cloud.ai.agent.nacos.NacosOptions;
 import com.alibaba.cloud.ai.demo.tools.ConsultTools;
+import com.alibaba.cloud.ai.graph.CompileConfig;
 import com.alibaba.cloud.ai.graph.KeyStrategy;
 import com.alibaba.cloud.ai.graph.KeyStrategyFactory;
 import com.alibaba.cloud.ai.graph.agent.ReactAgent;
+import com.alibaba.cloud.ai.graph.checkpoint.config.SaverConfig;
+import com.alibaba.cloud.ai.graph.checkpoint.constant.SaverEnum;
+import com.alibaba.cloud.ai.graph.checkpoint.savers.MemorySaver;
 import com.alibaba.cloud.ai.graph.state.strategy.ReplaceStrategy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -88,9 +92,16 @@ public class ConsultAgent {
 		logger.info("consult_agent add tools: " + tools.size());
 		logger.info("nacos options info: " + nacosOptions.toString());
 
+		// 使用 MemorySaver 实现会话状态持久化，同一 chat_id 的多轮对话状态可跨请求恢复
+		var saver = new MemorySaver();
+		var compileConfig = CompileConfig.builder()
+				.saverConfig(SaverConfig.builder().register(SaverEnum.MEMORY.getValue(), saver).build())
+				.build();
+
 		return ReactAgent
 				//.builder(new NacosAgentPromptBuilderFactory(nacosOptions))
 				.builder()
+				.compileConfig(compileConfig)
 				.name("consult_agent")
 				.model(chatModel)
 				.state(stateFactory)

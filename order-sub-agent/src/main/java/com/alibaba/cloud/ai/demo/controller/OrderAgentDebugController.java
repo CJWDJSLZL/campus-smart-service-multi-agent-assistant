@@ -16,13 +16,16 @@
 
 package com.alibaba.cloud.ai.demo.controller;
 
+import com.alibaba.cloud.ai.graph.CompiledGraph;
 import com.alibaba.cloud.ai.graph.NodeOutput;
+import com.alibaba.cloud.ai.graph.RunnableConfig;
 import com.alibaba.cloud.ai.graph.agent.ReactAgent;
 import com.alibaba.cloud.ai.graph.streaming.StreamingOutput;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.springframework.ai.chat.messages.UserMessage;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.MediaType;
 import org.springframework.http.codec.ServerSentEvent;
@@ -42,17 +45,50 @@ public class OrderAgentDebugController {
     private static final Logger logger = LoggerFactory.getLogger(OrderAgentDebugController.class);
     private final ReactAgent orderSubAgent;
 
+    @Autowired(required = false)
+    @Qualifier("planAndExecuteOrderGraph")
+    private CompiledGraph planAndExecuteGraph;
+
+    @Autowired(required = false)
+    @Qualifier("orderAgentWithMemory")
+    private CompiledGraph orderAgentWithMemory;
+
     public OrderAgentDebugController(@Qualifier("orderSubAgentBean") ReactAgent orderSubAgent) {
         this.orderSubAgent = orderSubAgent;
     }
 
+    /**
+     * Debug 接口，支持三种运行模式：
+     * <ul>
+     *   <li>{@code mode=react}（默认）：标准 ReactAgent，启用 MemorySaver Checkpoint</li>
+     *   <li>{@code mode=plan}：Plan-and-Execute 三节点 Graph（PlannerNode + ExecutorNode + SynthesizerNode）</li>
+     *   <li>{@code mode=memory}：带 Memory 主动注入的 StateGraph（MemoryInjectNode + ReactAgent）</li>
+     * </ul>
+     */
     @RequestMapping(path="/debug", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public Flux<ServerSentEvent<String>> chat(@RequestParam(name = "user_query") String userQuery) throws Exception {
+    public Flux<ServerSentEvent<String>> chat(
+            @RequestParam(name = "user_query") String userQuery,
+            @RequestParam(name = "chat_id", defaultValue = "debug-session") String chatId,
+            @RequestParam(name = "mode", defaultValue = "react") String mode) throws Exception {
 
-        Map<String, Object> input = Map.of(
-                "messages", List.of(new UserMessage(userQuery)));
+        RunnableConfig runnableConfig = RunnableConfig.builder().threadId(chatId).build();
+        Map<String, Object> input = Map.of("messages", List.of(new UserMessage(userQuery)));
         Sinks.Many<ServerSentEvent<String>> sink = Sinks.many().unicast().onBackpressureBuffer();
-        Flux<NodeOutput> result = orderSubAgent.stream(input);
+
+        CompiledGraph graph;
+        if ("plan".equals(mode) && planAndExecuteGraph != null) {
+            logger.info("Debug mode: plan-and-execute");
+            graph = planAndExecuteGraph;
+        } else if ("memory".equals(mode) && orderAgentWithMemory != null) {
+            logger.info("Debug mode: memory injection");
+            graph = orderAgentWithMemory;
+        } else {
+            // 默认：ReactAgent + MemorySaver Checkpoint
+            logger.info("Debug mode: react (checkpoint enabled, chat_id={})", chatId);
+            graph = orderSubAgent.getAndCompileGraph();
+        }
+
+        Flux<NodeOutput> result = graph.fluxStream(input, runnableConfig);
         processStream(result, sink);
 
         return sink.asFlux()

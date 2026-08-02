@@ -37,10 +37,12 @@ import java.util.Map;
 
 import com.alibaba.cloud.ai.graph.OverAllState;
 import com.alibaba.cloud.ai.graph.action.NodeAction;
+import com.google.gson.Gson;
 
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.prompt.SystemPromptTemplate;
+import org.springframework.ai.converter.BeanOutputConverter;
 import org.springframework.util.StringUtils;
 
 public class EvaluationClassifierNode implements NodeAction {
@@ -55,9 +57,8 @@ public class EvaluationClassifierNode implements NodeAction {
 				### Format
 				The conversation is: {inputText}. Categories are specified as a category list: {categories}. Satisfaction value is number from 0 to 5.
 				Classification instructions may be included to improve the classification accuracy: {classificationInstructions}.
-				### Constraint
-				输出JSON字符串，不要包含markdown相关字符。DO NOT include anything other than the JSON string in your response. 输出信息参考如下：
-				\\{'user':'10000', 'time': '2025-09-02 14:15:42', 'complaint':'yes', 'satisfaction':1, 'summary':'产品问题'\\}.
+				### Output Format
+				{format_instructions}
 			""";
 
 	private SystemPromptTemplate systemPromptTemplate;
@@ -73,6 +74,12 @@ public class EvaluationClassifierNode implements NodeAction {
 	private String inputTextKey;
 
 	private String outputKey;
+
+	// BeanOutputConverter 提供类型安全的 LLM 输出解析，替代手工 JSON 字符串处理
+	private final BeanOutputConverter<EvaluationResult> converter =
+			new BeanOutputConverter<>(EvaluationResult.class);
+
+	private final Gson gson = new Gson();
 
 	public EvaluationClassifierNode(ChatClient chatClient, String inputTextKey, List<String> categories,
 									List<String> classificationInstructions, String outputKey) {
@@ -91,15 +98,30 @@ public class EvaluationClassifierNode implements NodeAction {
 		}
 
 		ChatResponse response = chatClient.prompt()
-			.system(systemPromptTemplate.render(Map.of("inputText", inputText, "categories", categories,
-					"classificationInstructions", classificationInstructions)))
+			.system(systemPromptTemplate.render(Map.of(
+					"inputText", inputText,
+					"categories", categories,
+					"classificationInstructions", classificationInstructions,
+					"format_instructions", converter.getFormat())))
 			.user(inputText)
 			.call()
 			.chatResponse();
 
+		String rawText = response.getResult().getOutput().getText();
+		System.out.println(">>" + rawText);
+
 		Map<String, Object> updatedState = new HashMap<>();
-		updatedState.put(outputKey, response.getResult().getOutput().getText());
-		System.out.println(">>"+response.getResult().getOutput().getText());
+		try {
+			// 使用 BeanOutputConverter 进行类型安全解析
+			EvaluationResult result = converter.convert(rawText);
+			// 序列化回 JSON 字符串以兼容下游 Gson 解析逻辑
+			updatedState.put(outputKey, gson.toJson(result));
+		} catch (Exception e) {
+			// 降级：直接存储原始文本，保证流程不中断
+			System.err.println("BeanOutputConverter 解析失败，降级使用原始文本: " + e.getMessage());
+			updatedState.put(outputKey, rawText);
+		}
+
 		if (state.value("messages").isPresent()) {
 			updatedState.put("messages", response.getResult().getOutput());
 		}

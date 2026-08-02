@@ -23,8 +23,11 @@ import com.alibaba.cloud.ai.dashscope.rag.DashScopeDocumentRetrieverOptions;
 import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.document.Document;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -56,7 +59,14 @@ public class ConsultService {
     private String apiKey;
 
     private DashScopeApi dashscopeApi;
-    
+
+    // 用于查询改写的 ChatClient，在 initRetriever 中初始化
+    @Autowired
+    @Qualifier("dashscopeChatModel")
+    private ChatModel chatModel;
+
+    private ChatClient chatClient;
+
     @Autowired
     private ProductMapper productMapper;
 
@@ -69,6 +79,31 @@ public class ConsultService {
     @PostConstruct
     public void initRetriever() {
         this.dashscopeApi = DashScopeApi.builder().apiKey(apiKey).build();
+        // 初始化查询改写用的 ChatClient
+        this.chatClient = ChatClient.builder(chatModel).build();
+    }
+
+    /**
+     * 查询改写：用 LLM 将用户原始查询扩展为更适合知识库检索的形式，提升召回率。
+     * Rerank 已在 DashScopeDocumentRetrieverOptions 中启用，此方法在检索前改善查询质量。
+     */
+    private String rewriteQuery(String originalQuery) {
+        String prompt = "你是校园服务检索优化助手。将用户查询改写为更适合知识库检索的形式：\n"
+                + "1. 展开缩写词（如"奖学金"→"奖学金申请政策和评定条件"）\n"
+                + "2. 添加同义词和领域关键词（如"办理"→"申请办理流程步骤"）\n"
+                + "3. 补充"申请流程"、"办理步骤"、"所需材料"等场景词\n"
+                + "4. 只输出改写后的查询语句，不要任何解释\n"
+                + "原始查询：" + originalQuery;
+        try {
+            String rewritten = chatClient.prompt().user(prompt).call().content();
+            if (rewritten != null && !rewritten.isBlank()) {
+                logger.info("查询改写: [{}] -> [{}]", originalQuery, rewritten.trim());
+                return rewritten.trim();
+            }
+        } catch (Exception e) {
+            logger.warn("查询改写失败，使用原始查询: {}", e.getMessage());
+        }
+        return originalQuery;
     }
 
     /**
@@ -77,14 +112,17 @@ public class ConsultService {
     public String searchKnowledge(String query) {
         logger.info("=== ConsultService.searchKnowledge 入口 ===");
         logger.info("请求参数 - query: {}", query);
-        
+
+        // 查询改写：在检索前用 LLM 扩展查询，配合已启用的 Rerank 双重提升召回质量
+        String rewrittenQuery = rewriteQuery(query);
+
         try {
             DashScopeDocumentRetrieverOptions options = DashScopeDocumentRetrieverOptions.builder().
                     withEnableReranking(enableReranking).
                     withRerankTopN(rerankTopN).
                     withRerankMinScore(rerankMinScore).
                     build();
-            List<Document> documents = dashscopeApi.retriever(indexID, query, options);
+            List<Document> documents = dashscopeApi.retriever(indexID, rewrittenQuery, options);
 
             logger.info("检索到文档数量: {}", documents.size());
 

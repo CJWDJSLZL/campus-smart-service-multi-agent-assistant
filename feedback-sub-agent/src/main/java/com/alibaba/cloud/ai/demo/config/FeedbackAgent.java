@@ -16,9 +16,13 @@
 
 package com.alibaba.cloud.ai.demo.config;
 
+import com.alibaba.cloud.ai.graph.CompileConfig;
 import com.alibaba.cloud.ai.graph.KeyStrategy;
 import com.alibaba.cloud.ai.graph.KeyStrategyFactory;
 import com.alibaba.cloud.ai.graph.agent.ReactAgent;
+import com.alibaba.cloud.ai.graph.checkpoint.config.SaverConfig;
+import com.alibaba.cloud.ai.graph.checkpoint.constant.SaverEnum;
+import com.alibaba.cloud.ai.graph.checkpoint.savers.MemorySaver;
 import com.alibaba.cloud.ai.graph.state.strategy.ReplaceStrategy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -62,7 +66,15 @@ public class FeedbackAgent {
 			tools.add(toolCallback);
 		}
 		logger.info("feedback_agent add tools: " + tools.size());
+
+		// 使用 MemorySaver 实现会话状态持久化，同一 chat_id 的多轮对话状态可跨请求恢复
+		var saver = new MemorySaver();
+		var compileConfig = CompileConfig.builder()
+				.saverConfig(SaverConfig.builder().register(SaverEnum.MEMORY.getValue(), saver).build())
+				.build();
+
 		return ReactAgent.builder()
+				.compileConfig(compileConfig)
 				.name("feedback_agent")
 				.model(chatModel)
 				.state(stateFactory)

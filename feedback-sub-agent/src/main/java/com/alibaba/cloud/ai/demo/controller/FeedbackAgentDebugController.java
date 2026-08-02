@@ -16,7 +16,9 @@
 
 package com.alibaba.cloud.ai.demo.controller;
 
+import com.alibaba.cloud.ai.graph.CompiledGraph;
 import com.alibaba.cloud.ai.graph.NodeOutput;
+import com.alibaba.cloud.ai.graph.RunnableConfig;
 import com.alibaba.cloud.ai.graph.agent.ReactAgent;
 import com.alibaba.cloud.ai.graph.streaming.StreamingOutput;
 import org.slf4j.Logger;
@@ -47,12 +49,17 @@ public class FeedbackAgentDebugController {
     }
 
     @RequestMapping(path="/debug", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public Flux<ServerSentEvent<String>> chat(@RequestParam(name = "user_query") String userQuery) throws Exception {
+    public Flux<ServerSentEvent<String>> chat(
+            @RequestParam(name = "user_query") String userQuery,
+            @RequestParam(name = "chat_id", defaultValue = "debug-session") String chatId) throws Exception {
 
+        // 传入 threadId 使 MemorySaver 能按 chat_id 恢复对话状态，实现多轮 Checkpoint
+        RunnableConfig runnableConfig = RunnableConfig.builder().threadId(chatId).build();
         Map<String, Object> input = Map.of(
                 "messages", List.of(new UserMessage(userQuery)));
         Sinks.Many<ServerSentEvent<String>> sink = Sinks.many().unicast().onBackpressureBuffer();
-        Flux<NodeOutput> result = feedbackSubAgent.stream(input);
+        CompiledGraph compiledGraph = feedbackSubAgent.getAndCompileGraph();
+        Flux<NodeOutput> result = compiledGraph.fluxStream(input, runnableConfig);
         processStream(result, sink);
 
         return sink.asFlux()
