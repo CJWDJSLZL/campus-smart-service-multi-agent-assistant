@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.alibaba.cloud.ai.demo.node;
+package com.alibaba.cloud.ai.common.node;
 
 import com.alibaba.cloud.ai.graph.OverAllState;
 import com.alibaba.cloud.ai.graph.action.NodeAction;
@@ -29,7 +29,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Memory 主动注入节点。
+ * Memory 主动注入节点（公共组件）。
  *
  * <p>在 ReactAgent 执行前作为前置节点运行，主动调用 memory-search 工具检索用户历史偏好，
  * 并将结果以 SystemMessage 形式注入到 messages 列表的最前面。
@@ -37,7 +37,7 @@ import java.util.Map;
  * <p>相比依赖 LLM 被动决定是否调用 memory-search 工具，此节点保证每次对话都能加载用户记忆，
  * 实现个性化响应的确定性触发。
  *
- * <p>使用方式：将此节点作为 StateGraph 的第一个节点，后接 ReactAgent 节点：
+ * <p>各子智能体（order / consult / feedback）通过 StateGraph 共享此节点：
  * <pre>
  *   START → memory_inject_node → react_agent_node → END
  * </pre>
@@ -68,7 +68,6 @@ public class MemoryInjectNode implements NodeAction {
             if (StringUtils.hasText(memoryResult) && !memoryResult.contains("未找到")) {
                 List<Message> messages = castMessages(state.value("messages").orElse(List.of()));
                 List<Message> enriched = new ArrayList<>();
-                // 将历史记忆作为 SystemMessage 注入到对话上下文最前面
                 enriched.add(new SystemMessage("【用户历史偏好记忆】以下是该用户的历史偏好，请在回答时参考：\n" + memoryResult));
                 enriched.addAll(messages);
                 return Map.of("messages", enriched, "user_id", userId);

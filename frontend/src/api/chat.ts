@@ -90,6 +90,36 @@ export class ChatApiService {
       return false
     }
   }
+
+  /**
+   * Human-in-the-Loop 确认接口。
+   * 用户对 Agent 生成的执行计划进行确认（approve）或拒绝（reject）。
+   * 调用 order-sub-agent 的 /confirm 端点，通过相同 chat_id resume 暂停的 Graph。
+   */
+  async confirmAction(chatId: string, action: 'approve' | 'reject'): Promise<ReadableStream<Uint8Array> | null> {
+    try {
+      const baseUrl = this.configStore.baseUrl.replace('/api/assistant', '')
+      const params = new URLSearchParams({ chat_id: chatId, action })
+      const url = `${baseUrl}/api/order-sub-agent/confirm?${params}`
+      console.log('Confirm URL:', url)
+
+      const response = await fetch(url, {
+        method: 'GET',
+        mode: 'cors',
+        credentials: 'omit',
+        headers: { 'Accept': 'text/event-stream' }
+      })
+
+      if (!response.ok) {
+        throw new Error(`Confirm failed: ${response.status}`)
+      }
+
+      return response.body
+    } catch (error) {
+      console.error('Confirm API error:', error)
+      throw error
+    }
+  }
 }
 
 export const chatApiService = new ChatApiService()

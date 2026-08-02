@@ -53,16 +53,21 @@ public class OrderAgentDebugController {
     @Qualifier("orderAgentWithMemory")
     private CompiledGraph orderAgentWithMemory;
 
+    @Autowired(required = false)
+    @Qualifier("planAndExecuteHitlGraph")
+    private CompiledGraph hitlGraph;
+
     public OrderAgentDebugController(@Qualifier("orderSubAgentBean") ReactAgent orderSubAgent) {
         this.orderSubAgent = orderSubAgent;
     }
 
     /**
-     * Debug 接口，支持三种运行模式：
+     * Debug 接口，支持四种运行模式：
      * <ul>
      *   <li>{@code mode=react}（默认）：标准 ReactAgent，启用 MemorySaver Checkpoint</li>
      *   <li>{@code mode=plan}：Plan-and-Execute 三节点 Graph（PlannerNode + ExecutorNode + SynthesizerNode）</li>
      *   <li>{@code mode=memory}：带 Memory 主动注入的 StateGraph（MemoryInjectNode + ReactAgent）</li>
+     *   <li>{@code mode=hitl}：Human-in-the-Loop，planner 生成计划后暂停，等待 /confirm 确认后再执行</li>
      * </ul>
      */
     @RequestMapping(path="/debug", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
@@ -82,6 +87,9 @@ public class OrderAgentDebugController {
         } else if ("memory".equals(mode) && orderAgentWithMemory != null) {
             logger.info("Debug mode: memory injection");
             graph = orderAgentWithMemory;
+        } else if ("hitl".equals(mode) && hitlGraph != null) {
+            logger.info("Debug mode: human-in-the-loop (step 1: plan, chat_id={})", chatId);
+            graph = hitlGraph;
         } else {
             // 默认：ReactAgent + MemorySaver Checkpoint
             logger.info("Debug mode: react (checkpoint enabled, chat_id={})", chatId);
@@ -94,6 +102,43 @@ public class OrderAgentDebugController {
         return sink.asFlux()
                 .doOnCancel(() -> logger.info("Client disconnected from stream"))
                 .doOnError(e -> logger.error("Error occurred during streaming", e));
+    }
+
+    /**
+     * Human-in-the-Loop 确认端点。
+     *
+     * <p>在 {@code mode=hitl} 的 /debug 调用后，planner 生成计划并暂停于 executor 前。
+     * 前端展示计划内容，用户点击确认后调用此端点 resume 执行：
+     * <ul>
+     *   <li>{@code action=approve}：继续执行（resume），executor → synthesizer → END</li>
+     *   <li>{@code action=reject}：拒绝执行，返回取消提示</li>
+     * </ul>
+     */
+    @RequestMapping(path="/confirm", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public Flux<ServerSentEvent<String>> confirm(
+            @RequestParam(name = "chat_id") String chatId,
+            @RequestParam(name = "action", defaultValue = "approve") String action) {
+
+        if (hitlGraph == null) {
+            return Flux.just(ServerSentEvent.builder("HITL Graph 未初始化").build());
+        }
+
+        if ("reject".equals(action)) {
+            logger.info("HITL: user rejected plan (chat_id={})", chatId);
+            return Flux.just(ServerSentEvent.builder("操作已取消，如需重新办理请重新发起请求。").build());
+        }
+
+        logger.info("HITL: user approved plan, resuming executor (chat_id={})", chatId);
+        RunnableConfig runnableConfig = RunnableConfig.builder().threadId(chatId).build();
+        Sinks.Many<ServerSentEvent<String>> sink = Sinks.many().unicast().onBackpressureBuffer();
+
+        // 传入空 input，graph 从 checkpoint 恢复状态后从 executor 继续执行
+        Flux<NodeOutput> result = hitlGraph.fluxStream(Map.of(), runnableConfig);
+        processStream(result, sink);
+
+        return sink.asFlux()
+                .doOnCancel(() -> logger.info("Client disconnected from confirm stream"))
+                .doOnError(e -> logger.error("Error in confirm stream", e));
     }
 
     public void processStream(Flux<NodeOutput> generator, Sinks.Many<ServerSentEvent<String>> sink) {

@@ -16,9 +16,12 @@
 
 package com.alibaba.cloud.ai.demo.config;
 
+import com.alibaba.cloud.ai.common.node.MemoryInjectNode;
+import com.alibaba.cloud.ai.graph.CompiledGraph;
 import com.alibaba.cloud.ai.graph.CompileConfig;
 import com.alibaba.cloud.ai.graph.KeyStrategy;
 import com.alibaba.cloud.ai.graph.KeyStrategyFactory;
+import com.alibaba.cloud.ai.graph.StateGraph;
 import com.alibaba.cloud.ai.graph.agent.ReactAgent;
 import com.alibaba.cloud.ai.graph.checkpoint.config.SaverConfig;
 import com.alibaba.cloud.ai.graph.checkpoint.constant.SaverEnum;
@@ -35,6 +38,10 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import java.util.*;
+
+import static com.alibaba.cloud.ai.graph.StateGraph.END;
+import static com.alibaba.cloud.ai.graph.StateGraph.START;
+import static com.alibaba.cloud.ai.graph.action.AsyncNodeAction.node_async;
 
 @Configuration
 public class FeedbackAgent {
@@ -84,5 +91,47 @@ public class FeedbackAgent {
 				.outputKey("messages")
 				.tools(tools)
 				.build();
+	}
+
+	/**
+	 * Memory 主动注入 Graph（反馈智能体）。
+	 *
+	 * <p>与 order/consult-sub-agent 对称实现：START → memory_inject → react_agent → END。
+	 * 通过 Debug 接口 {@code ?mode=memory} 触发，展示 Memory 主动注入知识点。
+	 */
+	@Bean("feedbackAgentWithMemory")
+	public CompiledGraph feedbackAgentWithMemory(
+			@Qualifier("feedbackSubAgentBean") ReactAgent reactAgent,
+			@Autowired(required = false)
+			@Qualifier("loadbalancedMcpSyncToolCallbacks")
+			ToolCallbackProvider nacosToolsProvider) throws Exception {
+
+		ToolCallback memorySearchCb = null;
+		if (nacosToolsProvider != null) {
+			memorySearchCb = Arrays.stream(nacosToolsProvider.getToolCallbacks())
+					.filter(t -> "memory-search".equals(t.getToolDefinition().name()))
+					.findFirst()
+					.orElse(null);
+		}
+
+		MemoryInjectNode memoryInjectNode = new MemoryInjectNode(memorySearchCb);
+		KeyStrategyFactory factory = () -> {
+			HashMap<String, KeyStrategy> m = new HashMap<>();
+			m.put("messages", new ReplaceStrategy());
+			m.put("user_id", new ReplaceStrategy());
+			return m;
+		};
+
+		return new StateGraph("feedback_agent_with_memory", factory)
+				.addNode("memory_inject", node_async(memoryInjectNode))
+				.addNode("react_agent", node_async(state -> {
+					Map<String, Object> agentInput = new HashMap<>();
+					agentInput.put("messages", state.value("messages").orElse(List.of()));
+					return reactAgent.execute(agentInput);
+				}))
+				.addEdge(START, "memory_inject")
+				.addEdge("memory_inject", "react_agent")
+				.addEdge("react_agent", END)
+				.compile();
 	}
 }

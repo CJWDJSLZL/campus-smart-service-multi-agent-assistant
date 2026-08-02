@@ -150,6 +150,26 @@ public class ConsultService {
             }
             
             String finalResult = result.toString();
+
+            // 附加来源信息：让 Agent 回答中自然携带知识库来源，前端 Markdown 渲染后可见
+            StringBuilder sourceInfo = new StringBuilder("\n\n---\n**参考来源：**\n");
+            boolean hasSource = false;
+            for (Document doc : documents) {
+                String source = null;
+                if (doc.getMetadata() != null) {
+                    Object titleObj = doc.getMetadata().get("title");
+                    if (titleObj == null) titleObj = doc.getMetadata().get("source");
+                    if (titleObj == null) titleObj = doc.getMetadata().get("file_name");
+                    if (titleObj != null) source = titleObj.toString();
+                }
+                if (source == null || source.isBlank()) source = "校园知识库";
+                sourceInfo.append("- ").append(source).append("\n");
+                hasSource = true;
+            }
+            if (hasSource) {
+                finalResult = finalResult + sourceInfo;
+            }
+
             logger.info("=== ConsultService.searchKnowledge 出口 ===");
             logger.info("返回结果长度: {} 字符", finalResult.length());
             logger.info("返回结果预览: {}", finalResult.length() > 200 ? finalResult.substring(0, 200) + "..." : finalResult);

@@ -25,6 +25,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.springframework.ai.chat.messages.UserMessage;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.MediaType;
 import org.springframework.http.codec.ServerSentEvent;
@@ -44,22 +45,41 @@ public class FeedbackAgentDebugController {
     private static final Logger logger = LoggerFactory.getLogger(FeedbackAgentDebugController.class);
     private final ReactAgent feedbackSubAgent;
 
+    @Autowired(required = false)
+    @Qualifier("feedbackAgentWithMemory")
+    private CompiledGraph feedbackAgentWithMemory;
+
     public FeedbackAgentDebugController(@Qualifier("feedbackSubAgentBean") ReactAgent feedbackSubAgent) {
         this.feedbackSubAgent = feedbackSubAgent;
     }
 
+    /**
+     * Debug 接口，支持两种运行模式：
+     * <ul>
+     *   <li>{@code mode=react}（默认）：标准 ReactAgent，启用 MemorySaver Checkpoint</li>
+     *   <li>{@code mode=memory}：带 Memory 主动注入的 StateGraph（MemoryInjectNode + ReactAgent）</li>
+     * </ul>
+     */
     @RequestMapping(path="/debug", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public Flux<ServerSentEvent<String>> chat(
             @RequestParam(name = "user_query") String userQuery,
-            @RequestParam(name = "chat_id", defaultValue = "debug-session") String chatId) throws Exception {
+            @RequestParam(name = "chat_id", defaultValue = "debug-session") String chatId,
+            @RequestParam(name = "mode", defaultValue = "react") String mode) throws Exception {
 
-        // 传入 threadId 使 MemorySaver 能按 chat_id 恢复对话状态，实现多轮 Checkpoint
         RunnableConfig runnableConfig = RunnableConfig.builder().threadId(chatId).build();
-        Map<String, Object> input = Map.of(
-                "messages", List.of(new UserMessage(userQuery)));
+        Map<String, Object> input = Map.of("messages", List.of(new UserMessage(userQuery)));
         Sinks.Many<ServerSentEvent<String>> sink = Sinks.many().unicast().onBackpressureBuffer();
-        CompiledGraph compiledGraph = feedbackSubAgent.getAndCompileGraph();
-        Flux<NodeOutput> result = compiledGraph.fluxStream(input, runnableConfig);
+
+        CompiledGraph graph;
+        if ("memory".equals(mode) && feedbackAgentWithMemory != null) {
+            logger.info("Debug mode: memory injection (chat_id={})", chatId);
+            graph = feedbackAgentWithMemory;
+        } else {
+            logger.info("Debug mode: react (checkpoint enabled, chat_id={})", chatId);
+            graph = feedbackSubAgent.getAndCompileGraph();
+        }
+
+        Flux<NodeOutput> result = graph.fluxStream(input, runnableConfig);
         processStream(result, sink);
 
         return sink.asFlux()

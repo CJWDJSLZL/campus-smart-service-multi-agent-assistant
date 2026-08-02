@@ -103,6 +103,7 @@
     </dependencies>
 
     <modules>
+    <module>common</module>
     <module>order-mcp-server</module>
     <module>feedback-mcp-server</module>
     <module>consult-sub-agent</module>

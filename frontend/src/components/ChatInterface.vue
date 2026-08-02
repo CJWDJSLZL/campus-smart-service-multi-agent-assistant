@@ -17,8 +17,8 @@
 import { ref, computed, nextTick, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
-import { Button, Input, Avatar, Spin, message, Space, Tag, Card, Typography, Popover } from 'ant-design-vue'
-import { SendOutlined, ClearOutlined, SettingOutlined, UserOutlined, MenuOutlined, CalendarOutlined, FileSearchOutlined, MessageOutlined } from '@ant-design/icons-vue'
+import { Button, Input, Avatar, Spin, message, Space, Tag, Card, Typography, Popover, Modal } from 'ant-design-vue'
+import { SendOutlined, ClearOutlined, SettingOutlined, UserOutlined, MenuOutlined, CalendarOutlined, FileSearchOutlined, MessageOutlined, ExclamationCircleOutlined } from '@ant-design/icons-vue'
 import { useChatStore } from '@/stores/chat'
 import { useConfigStore } from '@/stores/config'
 import { chatApiService } from '@/api/chat'
@@ -35,6 +35,13 @@ const chatContainer = ref<HTMLElement>()
 const isStreaming = ref(false)
 const userIdInput = ref('')
 const showUserIdInput = ref(false)
+
+// Human-in-the-Loop 确认弹窗状态
+const confirmVisible = ref(false)
+const confirmContent = ref('')  // 展示给用户的计划摘要
+
+// 写操作关键词列表，命中时弹出确认弹窗
+const WRITE_KEYWORDS = ['创建', '预约', '申请', '取消', '修改备注', '为您办理', '已为您预约', '即将为您', '帮您办理', '确认办理']
 
 const canSend = computed(() => {
   return inputValue.value.trim().length > 0 && !chatStore.isLoading
@@ -164,6 +171,13 @@ const sendMessage = async () => {
     chatStore.updateLastMessage(assistantContent, false)
     isStreaming.value = false
 
+    // 关键词检测：streaming 结束后检查回答是否包含写操作意图，若命中则弹出确认弹窗
+    const hasWriteIntent = WRITE_KEYWORDS.some(kw => assistantContent.includes(kw))
+    if (hasWriteIntent) {
+      confirmContent.value = assistantContent
+      confirmVisible.value = true
+    }
+
   } catch (error: any) {
     console.error('Chat error details:', {
       error: error,
@@ -184,6 +198,64 @@ const sendMessage = async () => {
       focusChatInputTextArea()
     })
   }
+}
+
+/**
+ * 用户点击「确认执行」：调用 confirmAction(approve)，将 HITL 结果追加到对话中
+ */
+const handleConfirm = async () => {
+  confirmVisible.value = false
+  chatStore.addMessage({ type: 'assistant', content: '', isStreaming: true })
+  scrollToBottom()
+
+  try {
+    chatStore.setLoading(true)
+    const stream = await chatApiService.confirmAction(configStore.chatId, 'approve')
+    if (!stream) throw new Error('No confirm stream')
+
+    const reader = stream.getReader()
+    const decoder = new TextDecoder()
+    let content = ''
+    let buffer = ''
+
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+      buffer += decoder.decode(value, { stream: true })
+      const lines = buffer.split('\n')
+      buffer = lines.pop() || ''
+      for (const line of lines) {
+        if (line.startsWith('data:')) {
+          const data = line.slice(5).trim()
+          if (data) {
+            content += data
+            chatStore.updateLastMessage(content, true)
+            scrollToBottom()
+          }
+        }
+      }
+    }
+    chatStore.updateLastMessage(content, false)
+  } catch (error: any) {
+    chatStore.setError('确认执行失败')
+    message.error(`确认失败: ${error?.message || '未知错误'}`)
+    chatStore.messages.pop()
+  } finally {
+    chatStore.setLoading(false)
+    isStreaming.value = false
+  }
+}
+
+/**
+ * 用户点击「取消」：通知后端 reject，在对话中插入取消提示
+ */
+const handleReject = async () => {
+  confirmVisible.value = false
+  try {
+    await chatApiService.confirmAction(configStore.chatId, 'reject')
+  } catch (_) { /* 忽略 reject 错误 */ }
+  chatStore.addMessage({ type: 'assistant', content: '操作已取消。如需重新办理，请重新发起请求。' })
+  scrollToBottom()
 }
 
 const clearChat = () => {
@@ -474,6 +546,26 @@ const isLastAssistantMessage = (index: number) => {
         </Card>
       </div>
     </div>
+
+    <!-- Human-in-the-Loop 确认弹窗：Agent 回答中检测到写操作意图时弹出 -->
+    <a-modal
+      v-model:open="confirmVisible"
+      title="⚠️ 确认执行操作"
+      ok-text="确认执行"
+      cancel-text="取消操作"
+      @ok="handleConfirm"
+      @cancel="handleReject"
+    >
+      <p style="margin-bottom: 12px; color: #595959;">
+        Agent 即将执行写操作，请确认是否继续：
+      </p>
+      <div style="background: #f5f5f5; padding: 12px; border-radius: 6px; max-height: 300px; overflow-y: auto; font-size: 13px; white-space: pre-wrap; word-break: break-word;">
+        {{ confirmContent }}
+      </div>
+      <p style="margin-top: 12px; color: #8c8c8c; font-size: 12px;">
+        点击「确认执行」将继续完成办理；点击「取消操作」将终止本次操作。
+      </p>
+    </a-modal>
   </div>
 </template>
 

@@ -17,7 +17,7 @@
 package com.alibaba.cloud.ai.demo.config;
 
 import com.alibaba.cloud.ai.demo.node.ExecutorNode;
-import com.alibaba.cloud.ai.demo.node.MemoryInjectNode;
+import com.alibaba.cloud.ai.common.node.MemoryInjectNode;
 import com.alibaba.cloud.ai.demo.node.PlannerNode;
 import com.alibaba.cloud.ai.demo.node.SynthesizerNode;
 import com.alibaba.cloud.ai.graph.CompiledGraph;
@@ -213,5 +213,72 @@ public class OrderAgent {
 				.addEdge("executor", "synthesizer")
 				.addEdge("synthesizer", END)
 				.compile();
+	}
+
+	/**
+	 * Human-in-the-Loop Graph：在 executor 节点前插入中断点，等待用户二次确认。
+	 *
+	 * <p>流程：
+	 * <pre>
+	 *   第一次请求（生成计划）：
+	 *     START → planner → [INTERRUPT before executor] → 返回计划摘要给前端
+	 *
+	 *   用户确认后（第二次请求，相同 chat_id）：
+	 *     resume → executor → synthesizer → END → 返回执行结果
+	 * </pre>
+	 *
+	 * <p>通过 {@code CompileConfig.interruptBefore("executor")} 实现中断，
+	 * 结合 {@code MemorySaver} 持久化中断状态，通过相同 {@code threadId} 恢复执行。
+	 * 通过 Debug 接口 {@code ?mode=hitl} 触发第一步，
+	 * 通过 {@code /confirm} 端点触发第二步（resume）。
+	 */
+	@Bean("planAndExecuteHitlGraph")
+	public CompiledGraph planAndExecuteHitlGraph(
+			@Qualifier("dashscopeChatModel") ChatModel chatModel,
+			@Autowired(required = false) @Qualifier("mcpToolCallbacks")
+			ToolCallbackProvider toolsProvider,
+			@Autowired(required = false) @Qualifier("loadbalancedMcpSyncToolCallbacks")
+			ToolCallbackProvider nacosToolsProvider) throws Exception {
+
+		List<ToolCallback> tools = new ArrayList<>();
+		if (toolsProvider != null) {
+			for (ToolCallback toolCallback : toolsProvider.getToolCallbacks()) {
+				tools.add(toolCallback);
+			}
+		}
+		if (nacosToolsProvider != null) {
+			for (ToolCallback toolCallback : nacosToolsProvider.getToolCallbacks()) {
+				tools.add(toolCallback);
+			}
+		}
+		logger.info("planAndExecuteHitlGraph: loaded {} tools", tools.size());
+
+		ChatClient chatClient = ChatClient.builder(chatModel).build();
+
+		KeyStrategyFactory factory = () -> {
+			HashMap<String, KeyStrategy> m = new HashMap<>();
+			m.put("messages", new ReplaceStrategy());
+			m.put("execution_plan", new ReplaceStrategy());
+			m.put("step_results", new ReplaceStrategy());
+			return m;
+		};
+
+		// MemorySaver 持久化中断状态，使 resume 时能从 executor 继续执行
+		var saver = new MemorySaver();
+		var compileConfig = CompileConfig.builder()
+				.saverConfig(SaverConfig.builder()
+						.register(SaverEnum.MEMORY.getValue(), saver).build())
+				.interruptBefore(List.of("executor"))   // executor 前暂停，等待用户确认
+				.build();
+
+		return new StateGraph("plan_and_execute_hitl", factory)
+				.addNode("planner",     node_async(new PlannerNode(chatClient)))
+				.addNode("executor",    node_async(new ExecutorNode(tools)))
+				.addNode("synthesizer", node_async(new SynthesizerNode(chatClient)))
+				.addEdge(START, "planner")
+				.addEdge("planner", "executor")
+				.addEdge("executor", "synthesizer")
+				.addEdge("synthesizer", END)
+				.compile(compileConfig);
 	}
 }
