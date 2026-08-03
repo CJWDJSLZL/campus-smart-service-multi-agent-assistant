@@ -18,8 +18,15 @@ package com.alibaba.cloud.ai.demo;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
+/**
+ * 启用 @EnableScheduling 以支持本地定时触发（@Scheduled 替代 XxlJob）。
+ * 当 xxl.job.enabled=false 时，LocalScheduledTrigger 会自动激活，
+ * 无需外部 XxlJob 服务即可演示日报 Agent 和评测 Agent 的定时 Loop。
+ */
 @SpringBootApplication
+@EnableScheduling
 public class SupervisorAgentApplication
 {
     public static void main( String[] args )

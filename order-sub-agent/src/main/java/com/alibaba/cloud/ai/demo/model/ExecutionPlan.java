@@ -21,14 +21,16 @@ import java.util.List;
 /**
  * Plan-and-Execute 模式的结构化执行计划。
  *
- * <p>由 PlannerNode 通过 {@code BeanOutputConverter<ExecutionPlan>} 生成，
- * 包含用户目标描述和按顺序执行的步骤列表。
+ * <p>由 PlannerNode 通过 {@code BeanOutputConverter<ExecutionPlan>} 生成。
  *
- * <p>ExecutorNode 遍历 steps，按 toolName 查找并调用对应的 MCP 工具，
- * 实现确定性的多步骤执行而非 ReAct 的动态推理循环。
+ * <p>多轮澄清 Loop：当用户信息不完整时，{@code needsClarification=true}，
+ * {@code clarificationQuestion} 包含需要追问的内容，{@code steps} 为空。
+ * Controller 检测到 needsClarification 后返回澄清问题而非进入 executor。
  */
 public record ExecutionPlan(
         String goal,
+        boolean needsClarification,
+        String clarificationQuestion,
         List<ExecutionStep> steps
 ) {
     /**

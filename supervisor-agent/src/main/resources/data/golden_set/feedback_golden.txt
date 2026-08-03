@@ -1,0 +1,90 @@
+--- CASE_F001 ---
+input: 宿舍空调修了三天了还没来，太慢了！
+user_id: 10003
+expected_agent: feedback_agent
+expected_tools: [feedback-create-feedback]
+expected_output_keywords: [已记录, 抱歉, 后勤]
+expected_feedback_type: 3
+sentiment: negative
+---
+--- CASE_F002 ---
+input: 图书馆服务很好，希望增加设备状态提示
+user_id: 10001
+expected_agent: feedback_agent
+expected_tools: [feedback-create-feedback]
+expected_output_keywords: [感谢, 建议, 记录]
+expected_feedback_type: 4
+sentiment: positive
+---
+--- CASE_F003 ---
+input: 校园卡补办流程很顺畅，5分
+user_id: 10002
+expected_agent: feedback_agent
+expected_tools: [feedback-create-feedback]
+expected_output_keywords: [谢谢, 评价]
+expected_feedback_type: 2
+sentiment: positive
+---
+--- CASE_F004 ---
+input: 建议图书馆周末延长开放时间到22点
+user_id: 10001
+expected_agent: feedback_agent
+expected_tools: [feedback-create-feedback]
+expected_output_keywords: [建议, 已记录, 评估]
+expected_feedback_type: 4
+sentiment: neutral
+---
+--- CASE_F005 ---
+input: 我投诉教务窗口态度太差
+user_id: 10002
+expected_agent: feedback_agent
+expected_tools: [feedback-create-feedback]
+expected_output_keywords: [已记录, 抱歉, 投诉]
+expected_feedback_type: 3
+sentiment: negative
+---
+--- CASE_F006 ---
+input: 对上次宿舍报修服务满意，师傅很专业
+user_id: 10003
+expected_agent: feedback_agent
+expected_tools: [feedback-get-feedback-by-user, feedback-create-feedback]
+expected_output_keywords: [感谢, 评价, 记录]
+expected_feedback_type: 1
+sentiment: positive
+---
+--- CASE_F007 ---
+input: 心理咨询预约系统有 bug，选不了时间
+user_id: 10001
+expected_agent: feedback_agent
+expected_tools: [feedback-create-feedback]
+expected_output_keywords: [已记录, 技术问题, 反馈]
+expected_feedback_type: 2
+sentiment: negative
+---
+--- CASE_F008 ---
+input: 社团场地申请太麻烦了，审批流程能简化吗？
+user_id: 20001
+expected_agent: feedback_agent
+expected_tools: [feedback-create-feedback]
+expected_output_keywords: [建议, 简化, 已记录]
+expected_feedback_type: 4
+sentiment: neutral
+---
+--- CASE_F009 ---
+input: 我很不满意，宿管晚上查寝动静太大
+user_id: 10002
+expected_agent: feedback_agent
+expected_tools: [feedback-create-feedback]
+expected_output_keywords: [理解, 已记录, 投诉]
+expected_feedback_type: 3
+sentiment: negative
+---
+--- CASE_F010 ---
+input: 在读证明线上办理很方便，希望增加审核进度查询
+user_id: 10001
+expected_agent: feedback_agent
+expected_tools: [feedback-create-feedback]
+expected_output_keywords: [感谢, 建议, 进度]
+expected_feedback_type: 4
+sentiment: positive
+---

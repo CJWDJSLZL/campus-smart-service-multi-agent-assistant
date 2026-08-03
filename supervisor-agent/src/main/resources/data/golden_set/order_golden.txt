@@ -1,0 +1,72 @@
+--- CASE_O001 ---
+input: 帮我预约图书馆研讨间，明天下午，4个人
+user_id: 10001
+expected_agent: order_agent
+expected_tools: [campus-validate-service-item, campus-check-service-capacity, campus-create-service-record]
+expected_output_keywords: [预约成功, CAMPUS_, 研讨间]
+---
+--- CASE_O002 ---
+input: 我想申请在读证明，用于实习报名
+user_id: 10002
+expected_agent: order_agent
+expected_tools: [campus-create-service-record]
+expected_output_keywords: [办理记录, 在读证明, CAMPUS_]
+---
+--- CASE_O003 ---
+input: 查一下我最近的预约记录
+user_id: 10001
+expected_agent: order_agent
+expected_tools: [campus-get-service-records-by-user]
+expected_output_keywords: [记录编号, 服务事项, CAMPUS_]
+---
+--- CASE_O004 ---
+input: 取消我的 CAMPUS_20260601001 这条预约
+user_id: 10001
+expected_agent: order_agent
+expected_tools: [campus-cancel-service-record]
+expected_output_keywords: [取消成功]
+---
+--- CASE_O005 ---
+input: 修改一下我的预约备注，改成"需要投影仪"
+user_id: 10001
+expected_agent: order_agent
+expected_tools: [campus-get-service-records-by-user, campus-update-service-record-remark]
+expected_output_keywords: [备注更新成功, 投影仪]
+---
+--- CASE_O006 ---
+input: 按上次一样再预约一次
+user_id: 10001
+expected_agent: order_agent
+expected_tools: [campus-get-latest-service-record-by-user]
+expected_output_keywords: [上次, 确认, 预约]
+clarification_required: true
+---
+--- CASE_O007 ---
+input: 预约体育馆羽毛球场，明天上午2小时
+user_id: 10003
+expected_agent: order_agent
+expected_tools: [campus-validate-service-item, campus-check-service-capacity, campus-create-service-record]
+expected_output_keywords: [预约成功, 体育馆, CAMPUS_]
+---
+--- CASE_O008 ---
+input: 帮我预约
+user_id: 10001
+expected_agent: order_agent
+expected_tools: []
+expected_output_keywords: [哪项服务, 预约什么]
+clarification_required: true
+---
+--- CASE_O009 ---
+input: 宿舍空调坏了，帮我报修
+user_id: 10003
+expected_agent: order_agent
+expected_tools: [campus-create-service-record]
+expected_output_keywords: [宿舍报修, CAMPUS_]
+---
+--- CASE_O010 ---
+input: 我预约了心理咨询，想看看名额还剩多少
+user_id: 10002
+expected_agent: order_agent
+expected_tools: [campus-check-service-capacity]
+expected_output_keywords: [名额, 心理咨询]
+---

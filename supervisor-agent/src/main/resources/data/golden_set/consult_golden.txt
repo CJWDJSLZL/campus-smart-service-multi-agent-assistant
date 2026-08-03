@@ -1,0 +1,60 @@
+--- CASE_C001 ---
+input: 奖学金怎么申请？
+expected_agent: consult_agent
+expected_tools: [consult-search-knowledge]
+expected_output_keywords: [申请, 材料, 条件, 流程]
+---
+--- CASE_C002 ---
+input: 转专业需要什么条件？
+expected_agent: consult_agent
+expected_tools: [consult-search-knowledge]
+expected_output_keywords: [条件, 成绩, 申请, 教务]
+---
+--- CASE_C003 ---
+input: 图书馆研讨间有什么预约规则？
+expected_agent: consult_agent
+expected_tools: [consult-search-knowledge, consult-get-product-info]
+expected_output_keywords: [预约, 时间, 人数, 校园卡]
+---
+--- CASE_C004 ---
+input: 在读证明用来做什么？
+expected_agent: consult_agent
+expected_tools: [consult-search-knowledge]
+expected_output_keywords: [实习, 签证, 竞赛, 线上]
+---
+--- CASE_C005 ---
+input: 困难生认定需要哪些材料？
+expected_agent: consult_agent
+expected_tools: [consult-search-knowledge]
+expected_output_keywords: [调查表, 证明, 学院, 辅导员]
+---
+--- CASE_C006 ---
+input: 课程退选什么时候截止？
+expected_agent: consult_agent
+expected_tools: [consult-search-knowledge]
+expected_output_keywords: [退课, 截止, 补退选, 开学]
+---
+--- CASE_C007 ---
+input: 校园卡丢了怎么办？
+expected_agent: consult_agent
+expected_tools: [consult-search-knowledge, consult-get-product-info]
+expected_output_keywords: [挂失, 补办, 校园卡中心, 工本费]
+---
+--- CASE_C008 ---
+input: 宿舍报修流程是什么？
+expected_agent: consult_agent
+expected_tools: [consult-search-knowledge]
+expected_output_keywords: [报修, 后勤, 宿舍, 故障]
+---
+--- CASE_C009 ---
+input: 有哪些校园服务可以预约？
+expected_agent: consult_agent
+expected_tools: [consult-get-products]
+expected_output_keywords: [图书馆, 心理咨询, 体育馆, 宿舍报修]
+---
+--- CASE_C010 ---
+input: 社团活动场地怎么申请？
+expected_agent: consult_agent
+expected_tools: [consult-search-knowledge]
+expected_output_keywords: [场地, 申请, 学生工作处, 提前]
+---

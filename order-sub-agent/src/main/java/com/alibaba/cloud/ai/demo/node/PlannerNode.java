@@ -69,6 +69,17 @@ public class PlannerNode implements NodeAction {
             3. 每个步骤的 toolParameters 须为合法 JSON 字符串，包含该工具所需的所有参数
             4. 步骤数量尽量精简，避免冗余调用
 
+            【多轮澄清 Loop 规则】
+            在生成计划前，先检查用户提供的信息是否完整：
+            - campus-create-service-record 必须有：userId、具体服务事项名称（不能是"预约一下"等模糊表达）
+            - campus-cancel-service-record / campus-update-service-record-remark 必须有：userId、orderId
+            - 如果信息不完整，将 needsClarification 设为 true，在 clarificationQuestion 中写出需要追问的内容，steps 保持为空列表
+            - 如果信息完整，将 needsClarification 设为 false，clarificationQuestion 留空，正常生成 steps
+
+            澄清问题示例：
+            - 用户说"帮我预约" → clarificationQuestion: "您想预约哪项服务？（图书馆研讨间、心理咨询、体育馆等）"
+            - 用户说"取消我的预约" → clarificationQuestion: "请提供您要取消的记录编号（格式：CAMPUS_XXXXXX）"
+
             {format_instructions}
             """;
 
@@ -100,11 +111,17 @@ public class PlannerNode implements NodeAction {
         logger.info("PlannerNode: raw plan output: {}", planJson);
 
         ExecutionPlan plan = converter.convert(planJson);
-        logger.info("PlannerNode: parsed plan goal={}, steps={}", plan.goal(), plan.steps().size());
+        logger.info("PlannerNode: parsed plan goal={}, needsClarification={}, steps={}",
+                plan.goal(), plan.needsClarification(), plan.steps().size());
 
         Map<String, Object> result = new HashMap<>();
         result.put("execution_plan", plan);
         result.put("step_results", new ArrayList<String>());
+        // 多轮澄清 Loop：把澄清状态写入 state，让 Controller 检测并返回追问
+        if (plan.needsClarification()) {
+            result.put("clarification_question", plan.clarificationQuestion());
+            logger.info("PlannerNode: clarification needed: {}", plan.clarificationQuestion());
+        }
         return result;
     }
 

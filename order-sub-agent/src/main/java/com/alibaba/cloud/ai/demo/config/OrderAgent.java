@@ -201,6 +201,7 @@ public class OrderAgent {
 			m.put("messages", new ReplaceStrategy());
 			m.put("execution_plan", new ReplaceStrategy());
 			m.put("step_results", new ReplaceStrategy());
+			m.put("clarification_question", new ReplaceStrategy());
 			return m;
 		};
 
@@ -260,6 +261,7 @@ public class OrderAgent {
 			m.put("messages", new ReplaceStrategy());
 			m.put("execution_plan", new ReplaceStrategy());
 			m.put("step_results", new ReplaceStrategy());
+			m.put("clarification_question", new ReplaceStrategy());
 			return m;
 		};
 

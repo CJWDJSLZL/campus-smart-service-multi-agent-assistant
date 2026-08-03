@@ -18,6 +18,7 @@ package com.alibaba.cloud.ai.demo.config;
 
 import com.alibaba.cloud.ai.agent.nacos.NacosAgentPromptBuilderFactory;
 import com.alibaba.cloud.ai.agent.nacos.NacosOptions;
+import com.alibaba.cloud.ai.common.node.ContextCompressionNode;
 import com.alibaba.cloud.ai.common.node.MemoryInjectNode;
 import com.alibaba.cloud.ai.demo.tools.ConsultTools;
 import com.alibaba.cloud.ai.graph.CompiledGraph;
@@ -32,6 +33,7 @@ import com.alibaba.cloud.ai.graph.checkpoint.savers.MemorySaver;
 import com.alibaba.cloud.ai.graph.state.strategy.ReplaceStrategy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.tool.ToolCallback;
 import org.springframework.ai.tool.ToolCallbackProvider;
@@ -158,6 +160,41 @@ public class ConsultAgent {
 				}))
 				.addEdge(START, "memory_inject")
 				.addEdge("memory_inject", "react_agent")
+				.addEdge("react_agent", END)
+				.compile();
+	}
+
+	/**
+	 * 滑动窗口上下文压缩 Graph（咨询智能体）。
+	 *
+	 * <p>在 ReactAgent 前置 ContextCompressionNode：当 messages 超过 20 条时，
+	 * 用 LLM 摘要早期对话并压缩，保留最近 6 条，防止多轮对话 context 超限。
+	 *
+	 * <p>通过 Debug 接口 {@code ?mode=compress} 触发。
+	 */
+	@Bean("consultAgentWithCompression")
+	public CompiledGraph consultAgentWithCompression(
+			@Qualifier("consultSubAgentBean") ReactAgent reactAgent,
+			@Qualifier("dashscopeChatModel") ChatModel chatModel) throws Exception {
+
+		ChatClient chatClient = ChatClient.builder(chatModel).build();
+		ContextCompressionNode compressionNode = new ContextCompressionNode(chatClient);
+
+		KeyStrategyFactory factory = () -> {
+			HashMap<String, KeyStrategy> m = new HashMap<>();
+			m.put("messages", new ReplaceStrategy());
+			return m;
+		};
+
+		return new StateGraph("consult_agent_with_compression", factory)
+				.addNode("context_compress", node_async(compressionNode))
+				.addNode("react_agent", node_async(state -> {
+					Map<String, Object> agentInput = new HashMap<>();
+					agentInput.put("messages", state.value("messages").orElse(List.of()));
+					return reactAgent.execute(agentInput);
+				}))
+				.addEdge(START, "context_compress")
+				.addEdge("context_compress", "react_agent")
 				.addEdge("react_agent", END)
 				.compile();
 	}

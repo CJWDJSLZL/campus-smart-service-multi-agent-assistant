@@ -97,7 +97,10 @@ public class OrderAgentDebugController {
         }
 
         Flux<NodeOutput> result = graph.fluxStream(input, runnableConfig);
-        processStream(result, sink);
+
+        // 多轮澄清 Loop：检测 PlannerNode 输出的 clarification_question
+        // 若存在则直接返回澄清问题作为 SSE 流，不进入 executor
+        processStreamWithClarification(result, sink);
 
         return sink.asFlux()
                 .doOnCancel(() -> logger.info("Client disconnected from stream"))
@@ -170,5 +173,55 @@ public class OrderAgentDebugController {
                     sink.tryEmitError(e);
                 }
             );
+    }
+
+    /**
+     * 多轮澄清 Loop 感知的流处理。
+     *
+     * <p>在标准 LLM 流输出基础上，额外监听 planner 节点的 OverAllState，
+     * 若检测到 {@code clarification_question} 非空，说明 PlannerNode 判断信息不足，
+     * 将澄清问题作为 SSE 输出直接返回，前端接收后展示给用户。
+     * 用户补充信息后重新发起请求，形成多轮澄清循环。
+     */
+    public void processStreamWithClarification(Flux<NodeOutput> generator, Sinks.Many<ServerSentEvent<String>> sink) {
+        generator
+            .doOnNext(output -> {
+                logger.info("output = {}", output);
+                // 检测 planner 节点是否输出了澄清问题
+                if ("planner".equals(output.node()) && !(output instanceof StreamingOutput)) {
+                    try {
+                        Object stateObj = output.state();
+                        if (stateObj instanceof com.alibaba.cloud.ai.graph.OverAllState overAllState) {
+                            String clarification = (String) overAllState.value("clarification_question").orElse(null);
+                            if (clarification != null && !clarification.isBlank()) {
+                                logger.info("Clarification needed: {}", clarification);
+                                sink.tryEmitNext(ServerSentEvent.builder(clarification).build());
+                                sink.tryEmitComplete();
+                            }
+                        }
+                    } catch (Exception ignored) { /* 反射读取失败时静默忽略 */ }
+                }
+            })
+            .filter(output -> "llm".equals(output.node()) && output instanceof StreamingOutput)
+            .cast(StreamingOutput.class)
+            .filter(streamingOutput -> {
+                String chunk = streamingOutput.chunk();
+                return chunk != null && !chunk.trim().isEmpty();
+            })
+            .map(StreamingOutput::chunk)
+            .map(content -> ServerSentEvent.builder(content).build())
+            .doOnNext(sink::tryEmitNext)
+            .doOnError(e -> {
+                logger.error("Unexpected error in stream processing: {}", e.getMessage(), e);
+                sink.tryEmitNext(ServerSentEvent.builder("系统处理出现错误，请稍后重试。").build());
+            })
+            .doOnComplete(() -> {
+                logger.info("Stream processing completed successfully");
+                sink.tryEmitComplete();
+            })
+            .subscribe(null, e -> {
+                logger.error("Stream processing failed: {}", e.getMessage(), e);
+                sink.tryEmitError(e);
+            });
     }
 }

@@ -116,25 +116,32 @@ public class ConsultService {
         // 查询改写：在检索前用 LLM 扩展查询，配合已启用的 Rerank 双重提升召回质量
         String rewrittenQuery = rewriteQuery(query);
 
+        // 混合检索第一路：关键词精确匹配 products 表（精确服务名称、校区等短语召回率高）
+        String exactMatchContext = buildExactMatchContext(query);
+
         try {
             DashScopeDocumentRetrieverOptions options = DashScopeDocumentRetrieverOptions.builder().
                     withEnableReranking(enableReranking).
                     withRerankTopN(rerankTopN).
                     withRerankMinScore(rerankMinScore).
                     build();
+            // 混合检索第二路：向量检索（语义相似）
             List<Document> documents = dashscopeApi.retriever(indexID, rewrittenQuery, options);
 
             logger.info("检索到文档数量: {}", documents.size());
 
-            if (documents.isEmpty()) {
+            if (documents.isEmpty() && exactMatchContext.isEmpty()) {
                 String result = "未找到相关资料，查询内容：" + query;
                 logger.info("=== ConsultService.searchKnowledge 出口 ===");
                 logger.info("返回结果: {}", result);
                 return result;
             }
             
-            // 整合所有文档的text内容，用\n\n作为分隔符
+            // 合并：精确匹配结果前置（高优先级），向量检索结果后置
             StringBuilder result = new StringBuilder();
+            if (!exactMatchContext.isEmpty()) {
+                result.append(exactMatchContext).append("\n\n");
+            }
             for (int i = 0; i < documents.size(); i++) {
                 Document document = documents.get(i);
                 String text = document.getText();
@@ -184,6 +191,31 @@ public class ConsultService {
         }
     }
     
+    /**
+     * 混合检索辅助：关键词精确匹配 products 表。
+     * 对短语匹配度高、向量语义可能偏移的服务名称查询（如"校园卡""图书馆研讨间"）有更好的召回。
+     * 与向量检索结果合并，精确匹配结果前置以提高 LLM 参考优先级。
+     */
+    private String buildExactMatchContext(String query) {
+        try {
+            List<Product> matched = productMapper.selectByNameLike(query);
+            if (matched == null || matched.isEmpty()) return "";
+            StringBuilder sb = new StringBuilder("【服务事项精确匹配】\n");
+            for (Product p : matched) {
+                sb.append("- ").append(p.getName());
+                if (p.getDescription() != null && !p.getDescription().isBlank()) {
+                    sb.append("：").append(p.getDescription());
+                }
+                sb.append("\n");
+            }
+            logger.info("混合检索精确匹配: query=[{}] 命中 {} 条", query, matched.size());
+            return sb.toString();
+        } catch (Exception e) {
+            logger.warn("混合检索精确匹配失败: {}", e.getMessage());
+            return "";
+        }
+    }
+
     /**
      * 获取所有可用产品列表
      */

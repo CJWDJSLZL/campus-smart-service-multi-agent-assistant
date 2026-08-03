@@ -34,7 +34,11 @@ public class FeedbackMcpTools {
     /**
      * 创建用户反馈
      */
-    @Tool(name = "feedback-create-feedback", description = "创建校园服务反馈、投诉、建议或评价记录，userId 是必填项。适用于图书馆、教务、宿舍、场馆、校园卡、后勤等服务体验反馈。")
+    @Tool(name = "feedback-create-feedback",
+          description = "创建校园服务反馈、投诉、建议或评价记录（需提供 userId、feedbackType 和 content）。"
+                      + "适用于图书馆、教务、宿舍、场馆、校园卡、后勤等服务体验反馈场景。"
+                      + "执行前须已与用户确认反馈内容和类型；不适用于事务办理或政策查询。"
+                      + "feedbackType: 1=服务事项反馈, 2=校园服务反馈, 3=投诉, 4=建议。")
     public String createFeedback(
             @ToolParam(description = "用户ID，必填") Long userId,
             @ToolParam(description = "反馈类型：1-服务事项反馈，2-校园服务反馈，3-投诉，4-建议") Integer feedbackType,
@@ -68,7 +72,10 @@ public class FeedbackMcpTools {
     /**
      * 根据用户ID查询反馈记录
      */
-    @Tool(name = "feedback-get-feedback-by-user", description = "根据用户ID查询该用户提交过的校园反馈、投诉、建议或评价记录")
+    @Tool(name = "feedback-get-feedback-by-user",
+          description = "查询指定用户提交过的全部校园反馈、投诉、建议或评价记录（需提供 userId）。"
+                      + "适用于用户询问"我之前反馈过什么"或需要追踪历史投诉处理进展的场景。"
+                      + "仅返回该 userId 的反馈，不可查询他人记录。")
     public String getFeedbacksByUserId(@ToolParam(description = "用户ID") Long userId) {
         try {
             List<Feedback> feedbacks = feedbackService.getFeedbacksByUserId(userId);
@@ -97,7 +104,9 @@ public class FeedbackMcpTools {
     /**
      * 根据办理/预约记录编号查询反馈记录
      */
-    @Tool(name= "feedback-get-feedback-by-order", description = "根据办理/预约记录编号查询关联反馈记录")
+    @Tool(name = "feedback-get-feedback-by-order",
+          description = "根据办理或预约记录编号查询关联的反馈记录（需提供 orderId）。"
+                      + "适用于用户针对某次具体办理经历提交反馈、或查询该次办理是否已有反馈记录的场景。")
     public String getFeedbacksByOrderId(@ToolParam(description = "办理/预约记录编号") String orderId) {
         try {
             List<Feedback> feedbacks = feedbackService.getFeedbacksByOrderId(orderId);
@@ -127,7 +136,10 @@ public class FeedbackMcpTools {
     /**
      * 更新反馈解决方案
      */
-    @Tool(name= "feedback-update-solution", description = "更新校园反馈或投诉的处理方案、回复口径或后续跟进说明")
+    @Tool(name = "feedback-update-solution",
+          description = "更新校园反馈或投诉的处理方案、回复口径或后续跟进说明（需提供 feedbackId 和 solution）。"
+                      + "适用于用户认可处理方案后记录、或补充跟进说明的场景。"
+                      + "不适用于修改反馈内容本身，仅更新处理方案字段。")
     public String updateFeedbackSolution(
             @ToolParam(description = "反馈ID") Long feedbackId,
             @ToolParam(description = "解决方案") String solution) {

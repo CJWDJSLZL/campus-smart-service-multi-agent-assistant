@@ -225,18 +225,48 @@ public class EvaluationAgentConfiguration {
 			strategies.put("summary_message_to_sender", new ReplaceStrategy());
 			strategies.put("message_sender_result", new ReplaceStrategy());
 			strategies.put("access_token", new ReplaceStrategy());
+			strategies.put("avg_satisfaction", new ReplaceStrategy());
 			return strategies;
 		}).addNode("session_loader_node", sessionLoaderNode)
 				.addNode("iteration_session_analysis_node", iterationNode)
 				.addNode("session_result_summary_node", sessionResultSummaryNode)
 				.addNode("message_parse", node_async(llmNode))
 				.addNode("message_sender", node_async(generateMessageSender()))
+				// 条件分支 Loop：满意度 < 3 走告警分支，≥ 3 走普通分支
+				.addConditionalEdges("session_result_summary_node",
+						state -> {
+							try {
+								String s = state.value("analysis_results", "[]");
+								List<Object> results = new com.google.gson.Gson().fromJson(s, List.class);
+								if (results.isEmpty()) return "normal";
+								double total = 0;
+								int count = 0;
+								for (Object result : results) {
+									Map<String, Object> map = new com.google.gson.Gson().fromJson(result.toString(), Map.class);
+									if (map.containsKey("satisfaction") && map.get("satisfaction") instanceof Number) {
+										total += ((Number) map.get("satisfaction")).doubleValue();
+										count++;
+									}
+								}
+								double avg = count > 0 ? total / count : 5.0;
+								return avg < 3.0 ? "alert" : "normal";
+							} catch (Exception e) {
+								return "normal";
+							}
+						},
+						Map.of("normal", "message_parse", "alert", "alert_message_parse")
+				)
+				// 普通路径
+				.addEdge("message_parse", "message_sender")
+				.addEdge("message_sender", END)
+				// 告警路径：满意度低于 3 时推送专项告警
+				.addNode("alert_message_parse", node_async(generateAlertLlmNode(chatClient)))
+				.addNode("alert_message_sender", node_async(generateAlertMessageSender()))
+				.addEdge("alert_message_parse", "alert_message_sender")
+				.addEdge("alert_message_sender", END)
 				.addEdge(START, "session_loader_node")
 				.addEdge("session_loader_node", "iteration_session_analysis_node")
-				.addEdge("iteration_session_analysis_node", "session_result_summary_node")
-				.addEdge("session_result_summary_node", "message_parse")
-				.addEdge("message_parse", "message_sender")
-				.addEdge("message_sender", END);
+				.addEdge("iteration_session_analysis_node", "session_result_summary_node");
 
 		CompiledGraph compiledGraph = stateGraph.compile();
 		compiledGraph.setMaxIterations(1000);
@@ -253,6 +283,49 @@ public class EvaluationAgentConfiguration {
 				.messageContentKey(messageContentKey)
 				.resultKey(resultKey)
 				.title(title)
+				.build();
+	}
+
+	/**
+	 * 条件分支 Loop：告警路径的 LLM 摘要节点。
+	 * 当平均满意度 < 3 时触发，生成更紧急的告警格式报告。
+	 */
+	private LlmNode generateAlertLlmNode(ChatClient chatClient) {
+		return LlmNode.builder().chatClient(chatClient)
+				.paramsKey("summary_message")
+				.outputKey("summary_message_to_sender")
+				.systemPromptTemplate("""
+					你是一个紧急告警信息整理助手。用户满意度已严重偏低（平均分 < 3），需要生成醒目的告警报告推送钉钉。
+
+					核心内容如下：{context}
+
+					约束：
+					- 数据数值绝对不能篡改
+					- 使用红色告警标识（⚠️ 🚨）突出严重性
+					- 改进方向控制在3条以内，并标注【紧急】前缀
+					- 信息格式参考：
+					## 🚨 紧急告警：用户满意度严重偏低
+
+					**📉 平均满意度**：`{score}` / 5（低于预警线 3.0）
+					**⚠️ 产品投诉**：`{complaints}` 条
+					**📊 总评价数**：`{total}` 条
+
+					### 🔴 用户核心诉求（需立即跟进）
+					> {summary}
+				""")
+				.build();
+	}
+
+	/**
+	 * 条件分支 Loop：告警路径的钉钉推送节点。
+	 */
+	private DingMessageSenderNode generateAlertMessageSender() {
+		return DingMessageSenderNode.builder()
+				.accessToken(accessToken)
+				.accessTokenKey("access_token")
+				.messageContentKey("summary_message_to_sender")
+				.resultKey("message_sender_result")
+				.title("🚨 用户满意度告警")
 				.build();
 	}
 }

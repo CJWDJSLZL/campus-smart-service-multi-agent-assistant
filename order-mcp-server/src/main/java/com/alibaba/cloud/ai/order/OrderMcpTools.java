@@ -43,7 +43,11 @@ public class OrderMcpTools {
     /**
      * 创建校园事务办理/预约记录工具（兼容原订单表结构）。
      */
-    @Tool(name = "campus-create-service-record", description = "为指定用户创建校园事务办理或预约记录。适用于图书馆研讨间预约、心理咨询预约、证明材料办理、场馆预约、校园卡补办等服务事项。系统会校验服务事项是否可用以及剩余名额是否充足。")
+    @Tool(name = "campus-create-service-record",
+          description = "创建校园服务事项的办理或预约记录（需提供 userId、服务事项名称、办理方式、优先级）。"
+                      + "适用于图书馆研讨间预约、心理咨询预约、证明材料办理、场馆预约、校园卡补办等场景。"
+                      + "执行前须确认用户已知晓服务名称和时间偏好；系统会自动校验名额是否充足。"
+                      + "不适用于查询、修改或取消已有记录。")
     public String createOrderWithUser(
             @ToolParam(description = "用户ID，必须为正整数") Long userId,
             @ToolParam(description = "校园服务事项名称，例如：图书馆研讨间预约、心理咨询预约、在读证明办理、校园卡补办、体育馆预约") String productName,
@@ -70,7 +74,10 @@ public class OrderMcpTools {
     /**
      * 查询办理记录工具（兼容原有接口）。
      */
-    @Tool(name = "campus-get-service-record", description = "根据记录编号查询校园事务办理/预约记录详情。")
+    @Tool(name = "campus-get-service-record",
+          description = "根据记录编号查询校园事务办理或预约记录详情（需提供 orderId）。"
+                      + "适用于用户提供记录编号时的精确查询场景。"
+                      + "不限制用户身份，若需按用户查询请使用 campus-get-service-record-by-user。")
     public String getOrder(@ToolParam(description = "记录编号，兼容 CAMPUS_ 开头的唯一标识符，例如：CAMPUS_20260601001") String orderId) {
         try {
             Order order = orderService.getOrder(orderId);
@@ -90,7 +97,10 @@ public class OrderMcpTools {
     /**
      * 根据用户ID和记录编号查询办理记录工具。
      */
-    @Tool(name = "campus-get-service-record-by-user", description = "根据用户ID和记录编号查询该用户自己的校园事务办理/预约记录。只能查询属于该用户的记录。")
+    @Tool(name = "campus-get-service-record-by-user",
+          description = "根据用户ID和记录编号查询该用户自己的校园事务办理或预约记录（需提供 userId 和 orderId）。"
+                      + "仅能查询属于该 userId 的记录，防止越权访问。"
+                      + "若只有 userId 而无 orderId，请使用 campus-get-service-records-by-user。")
     public String getOrderByUser(
             @ToolParam(description = "用户ID，必须为正整数") Long userId,
             @ToolParam(description = "记录编号，兼容 CAMPUS_ 开头的唯一标识符，例如：CAMPUS_20260601001") String orderId) {
@@ -112,7 +122,10 @@ public class OrderMcpTools {
     /**
      * 检查服务事项余量工具。
      */
-    @Tool(name = "campus-check-service-capacity", description = "检查指定校园服务事项或资源的剩余名额是否充足，适用于预约前确认资源可用性。")
+    @Tool(name = "campus-check-service-capacity",
+          description = "检查指定校园服务事项的剩余名额是否充足（需提供服务名称和所需数量）。"
+                      + "适用于预约前确认资源可用性，避免创建后发现无名额的情况。"
+                      + "建议在调用 campus-create-service-record 前先调用此工具。")
     public String checkStock(
             @ToolParam(description = "校园服务事项或资源名称") String productName, 
             @ToolParam(description = "需要检查的预约名额或办理数量，必须为正整数") int quantity) {
@@ -129,7 +142,10 @@ public class OrderMcpTools {
     /**
      * 获取所有办理记录工具（兼容原有接口）。
      */
-    @Tool(name = "campus-get-service-records", description = "获取系统中所有校园事务办理/预约记录列表。主要用于管理端统计，不应用于普通用户越权查询。")
+    @Tool(name = "campus-get-service-records",
+          description = "获取系统中所有校园事务办理或预约记录列表（无需参数）。"
+                      + "仅适用于管理端统计场景，普通用户请求时不应调用此工具以防越权。"
+                      + "普通用户查询请使用 campus-get-service-records-by-user。")
     public String getAllOrders() {
         try {
             List<Order> orders = orderService.getAllOrders();
@@ -154,7 +170,10 @@ public class OrderMcpTools {
     /**
      * 根据用户ID获取办理记录列表工具。
      */
-    @Tool(name = "campus-get-service-records-by-user", description = "根据用户ID获取该用户自己的校园事务办理/预约记录列表。")
+    @Tool(name = "campus-get-service-records-by-user",
+          description = "查询指定用户的全部校园事务办理或预约记录列表（需提供 userId）。"
+                      + "适用于用户询问"我有哪些预约"或"查看我的记录"等场景。"
+                      + "仅返回该 userId 的记录，不可查询他人记录。")
     public String getOrdersByUser(@ToolParam(description = "用户ID，必须为正整数") Long userId) {
         try {
             List<OrderResponse> orders = orderService.getOrdersByUserId(userId);
@@ -176,7 +195,10 @@ public class OrderMcpTools {
         }
     }
 
-    @Tool(name = "campus-get-latest-service-record-by-user", description = "根据用户ID查询该用户最近一次校园事务办理/预约记录。适用于用户询问“上次办的是什么”“按上次预约一样”“和上次一样”等场景。只能查询该用户自己的记录；查询后应先向用户确认，再创建新记录。")
+    @Tool(name = “campus-get-latest-service-record-by-user”,
+          description = “查询指定用户最近一次校园事务办理或预约记录（需提供 userId）。”
+                      + “适用于用户说”上次办的是什么””按上次一样””和上次相同”等场景。”
+                      + “查询后须向用户确认内容再据此创建新记录，不可直接复制执行。仅查询该用户自己的记录。”)
     public String getLatestOrderByUser(@ToolParam(description = "用户ID，必须为正整数") Long userId) {
         try {
             OrderResponse order = orderService.getLatestOrderByUserId(userId);
@@ -196,7 +218,10 @@ public class OrderMcpTools {
     /**
      * 多维度查询用户办理记录工具。
      */
-    @Tool(name = "campus-query-service-records", description = "根据多个条件查询用户自己的校园事务办理/预约记录，支持按服务事项名称、办理方式、优先级/时间偏好、时间范围等条件筛选。")
+    @Tool(name = "campus-query-service-records",
+          description = "按多条件筛选查询用户自己的校园事务办理或预约记录（需提供 userId，其余参数可选）。"
+                      + "支持按服务名称、办理方式、时间偏好、时间范围组合筛选。"
+                      + "比 campus-get-service-records-by-user 灵活，适用于用户需要筛选特定类型或时间段记录的场景。")
     public String queryOrders(
             @ToolParam(description = "用户ID，必须为正整数") Long userId,
             @ToolParam(description = "服务事项名称，可选，支持模糊匹配") String productName,
@@ -239,7 +264,10 @@ public class OrderMcpTools {
     /**
      * 取消办理记录工具。
      */
-    @Tool(name = "campus-cancel-service-record", description = "根据用户ID和记录编号取消校园事务办理/预约记录。只能取消属于该用户的记录。")
+    @Tool(name = "campus-cancel-service-record",
+          description = "取消指定用户的校园事务办理或预约记录（需提供 userId 和 orderId）。"
+                      + "执行前须与用户确认记录编号；仅能取消属于该 userId 的记录。"
+                      + "不适用于查询记录，取消前若无记录编号请先调用查询工具。")
     public String deleteOrder(
             @ToolParam(description = "用户ID，必须为正整数") Long userId,
             @ToolParam(description = "记录编号，兼容 CAMPUS_ 开头的唯一标识符") String orderId) {
@@ -258,7 +286,10 @@ public class OrderMcpTools {
     /**
      * 更新办理记录备注工具。
      */
-    @Tool(name = "campus-update-service-record-remark", description = "根据用户ID和记录编号更新校园事务办理/预约记录备注。只能更新属于该用户的记录。")
+    @Tool(name = "campus-update-service-record-remark",
+          description = "更新指定用户的校园事务办理或预约记录备注（需提供 userId、orderId 和新备注内容）。"
+                      + "适用于用户需要补充说明、修改时间偏好或添加材料说明的场景。"
+                      + "仅能更新属于该 userId 的记录；不修改服务事项名称和办理状态。")
     public String updateOrderRemark(
             @ToolParam(description = "用户ID，必须为正整数") Long userId,
             @ToolParam(description = "记录编号，兼容 CAMPUS_ 开头的唯一标识符") String orderId,
@@ -278,7 +309,10 @@ public class OrderMcpTools {
     /**
      * 验证服务事项是否存在工具。
      */
-    @Tool(name = "campus-validate-service-item", description = "验证指定校园服务事项是否存在且可用。")
+    @Tool(name = "campus-validate-service-item",
+          description = "验证指定校园服务事项是否存在且当前可用（需提供服务事项名称）。"
+                      + "适用于创建记录前确认服务名称拼写和可用状态。"
+                      + "若返回不可用，应告知用户原因并建议替代方案，不应继续创建记录。")
     public String validateProduct(@ToolParam(description = "校园服务事项名称") String productName) {
         try {
             boolean exists = orderService.validateProduct(productName);

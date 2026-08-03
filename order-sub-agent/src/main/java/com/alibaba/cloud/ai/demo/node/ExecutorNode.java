@@ -36,10 +36,14 @@ import java.util.Map;
  *
  * <p>相比 ReactAgent 的动态推理循环，ExecutorNode 以确定性方式逐步执行，
  * 每步结果都被记录下来供 SynthesizerNode 汇总。
+ *
+ * <p>每个步骤失败时进行指数退避重试（最多 {@value MAX_RETRY} 次），
+ * 延迟公式：500ms × (retryCount + 1)。
  */
 public class ExecutorNode implements NodeAction {
 
     private static final Logger logger = LoggerFactory.getLogger(ExecutorNode.class);
+    private static final int MAX_RETRY = 3;
 
     private final Map<String, ToolCallback> toolMap;
 
@@ -70,19 +74,44 @@ public class ExecutorNode implements NodeAction {
                 continue;
             }
 
-            try {
-                String result = tool.call(step.toolParameters());
-                String stepResult = String.format("Step %d [%s]: %s", step.stepNumber(), step.toolName(), result);
-                logger.info("ExecutorNode: {}", stepResult);
-                stepResults.add(stepResult);
-            } catch (Exception e) {
-                String errorMsg = String.format("Step %d [%s] 执行失败: %s",
-                        step.stepNumber(), step.toolName(), e.getMessage());
-                logger.error(errorMsg);
-                stepResults.add(errorMsg);
-            }
+            // 指数退避重试：单步工具调用失败时最多重试 MAX_RETRY 次
+            String stepResult = executeWithRetry(step, tool);
+            stepResults.add(stepResult);
         }
 
         return Map.of("step_results", stepResults);
+    }
+
+    /**
+     * 带指数退避的工具调用。
+     * 延迟策略：第 1 次重试等待 500ms，第 2 次等待 1000ms，第 3 次等待 1500ms。
+     */
+    private String executeWithRetry(ExecutionPlan.ExecutionStep step, ToolCallback tool) {
+        Exception lastException = null;
+        for (int retry = 0; retry <= MAX_RETRY; retry++) {
+            try {
+                if (retry > 0) {
+                    long delay = 500L * retry;
+                    logger.warn("ExecutorNode: step {} retry {}/{}, waiting {}ms",
+                            step.stepNumber(), retry, MAX_RETRY, delay);
+                    Thread.sleep(delay);
+                }
+                String result = tool.call(step.toolParameters());
+                if (retry > 0) {
+                    logger.info("ExecutorNode: step {} succeeded on retry {}", step.stepNumber(), retry);
+                }
+                return String.format("Step %d [%s]: %s", step.stepNumber(), step.toolName(), result);
+            } catch (InterruptedException ie) {
+                Thread.currentThread().interrupt();
+                return String.format("Step %d [%s] 被中断", step.stepNumber(), step.toolName());
+            } catch (Exception e) {
+                lastException = e;
+                logger.error("ExecutorNode: step {} attempt {} failed: {}",
+                        step.stepNumber(), retry + 1, e.getMessage());
+            }
+        }
+        return String.format("Step %d [%s] 执行失败（已重试 %d 次）: %s",
+                step.stepNumber(), step.toolName(), MAX_RETRY,
+                lastException != null ? lastException.getMessage() : "未知错误");
     }
 }
