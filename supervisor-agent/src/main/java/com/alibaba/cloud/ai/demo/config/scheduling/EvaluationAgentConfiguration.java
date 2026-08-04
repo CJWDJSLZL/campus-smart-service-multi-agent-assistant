@@ -238,7 +238,7 @@ public class EvaluationAgentConfiguration {
 							try {
 								String s = state.value("analysis_results", "[]");
 								List<Object> results = new com.google.gson.Gson().fromJson(s, List.class);
-								if (results.isEmpty()) return "normal";
+								if (results.isEmpty()) return java.util.concurrent.CompletableFuture.completedFuture("normal");
 								double total = 0;
 								int count = 0;
 								for (Object result : results) {
@@ -249,9 +249,10 @@ public class EvaluationAgentConfiguration {
 									}
 								}
 								double avg = count > 0 ? total / count : 5.0;
-								return avg < 3.0 ? "alert" : "normal";
+								// graph-core 1.0.0.4: 条件分支需返回 CompletableFuture<String>
+								return java.util.concurrent.CompletableFuture.completedFuture(avg < 3.0 ? "alert" : "normal");
 							} catch (Exception e) {
-								return "normal";
+								return java.util.concurrent.CompletableFuture.completedFuture("normal");
 							}
 						},
 						Map.of("normal", "message_parse", "alert", "alert_message_parse")

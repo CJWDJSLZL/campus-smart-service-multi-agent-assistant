@@ -127,7 +127,10 @@ public class FeedbackAgent {
 				.addNode("react_agent", node_async(state -> {
 					Map<String, Object> agentInput = new HashMap<>();
 					agentInput.put("messages", state.value("messages").orElse(List.of()));
-					return reactAgent.execute(agentInput);
+					// graph-core 1.0.0.4: ReactAgent.execute(Map) 已移除，改用 CompiledGraph.invoke
+					return reactAgent.getCompiledGraph().invoke(agentInput)
+							.map(com.alibaba.cloud.ai.graph.OverAllState::data)
+							.orElse(Map.of());
 				}))
 				.addEdge(START, "memory_inject")
 				.addEdge("memory_inject", "react_agent")

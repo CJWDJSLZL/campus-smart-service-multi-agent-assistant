@@ -74,7 +74,7 @@ public class FeedbackMcpTools {
      */
     @Tool(name = "feedback-get-feedback-by-user",
           description = "查询指定用户提交过的全部校园反馈、投诉、建议或评价记录（需提供 userId）。"
-                      + "适用于用户询问"我之前反馈过什么"或需要追踪历史投诉处理进展的场景。"
+                      + "适用于用户询问“我之前反馈过什么”或需要追踪历史投诉处理进展的场景。"
                       + "仅返回该 userId 的反馈，不可查询他人记录。")
     public String getFeedbacksByUserId(@ToolParam(description = "用户ID") Long userId) {
         try {

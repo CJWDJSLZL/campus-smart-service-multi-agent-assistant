@@ -153,7 +153,10 @@ public class OrderAgent {
 					// 将注入后的 messages 传入原 ReactAgent 处理
 					Map<String, Object> agentInput = new HashMap<>();
 					agentInput.put("messages", state.value("messages").orElse(List.of()));
-					return reactAgent.execute(agentInput);
+					// graph-core 1.0.0.4: ReactAgent.execute(Map) 已移除，改用 CompiledGraph.invoke
+					return reactAgent.getCompiledGraph().invoke(agentInput)
+							.map(com.alibaba.cloud.ai.graph.OverAllState::data)
+							.orElse(Map.of());
 				}))
 				.addEdge(START, "memory_inject")
 				.addEdge("memory_inject", "react_agent")
@@ -270,7 +273,7 @@ public class OrderAgent {
 		var compileConfig = CompileConfig.builder()
 				.saverConfig(SaverConfig.builder()
 						.register(SaverEnum.MEMORY.getValue(), saver).build())
-				.interruptBefore(List.of("executor"))   // executor 前暂停，等待用户确认
+				.interruptBefore("executor")   // executor 前暂停，等待用户确认
 				.build();
 
 		return new StateGraph("plan_and_execute_hitl", factory)

@@ -172,7 +172,7 @@ public class OrderMcpTools {
      */
     @Tool(name = "campus-get-service-records-by-user",
           description = "查询指定用户的全部校园事务办理或预约记录列表（需提供 userId）。"
-                      + "适用于用户询问"我有哪些预约"或"查看我的记录"等场景。"
+                      + "适用于用户询问“我有哪些预约”或“查看我的记录”等场景。"
                       + "仅返回该 userId 的记录，不可查询他人记录。")
     public String getOrdersByUser(@ToolParam(description = "用户ID，必须为正整数") Long userId) {
         try {
@@ -195,10 +195,10 @@ public class OrderMcpTools {
         }
     }
 
-    @Tool(name = “campus-get-latest-service-record-by-user”,
-          description = “查询指定用户最近一次校园事务办理或预约记录（需提供 userId）。”
-                      + “适用于用户说”上次办的是什么””按上次一样””和上次相同”等场景。”
-                      + “查询后须向用户确认内容再据此创建新记录，不可直接复制执行。仅查询该用户自己的记录。”)
+    @Tool(name = "campus-get-latest-service-record-by-user",
+          description = "查询指定用户最近一次校园事务办理或预约记录（需提供 userId）。"
+                      + "适用于用户说“上次办的是什么”“按上次一样”“和上次相同”等场景。"
+                      + "查询后须向用户确认内容再据此创建新记录，不可直接复制执行。仅查询该用户自己的记录。")
     public String getLatestOrderByUser(@ToolParam(description = "用户ID，必须为正整数") Long userId) {
         try {
             OrderResponse order = orderService.getLatestOrderByUserId(userId);
