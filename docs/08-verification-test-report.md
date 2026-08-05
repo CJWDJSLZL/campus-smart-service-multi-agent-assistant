@@ -8,7 +8,7 @@
 
 | 结论 | 说明 |
 |---|---|
-| **L0 静态验证** | 20 项检查，**17 项通过，2 项失败**（均为真实缺陷，非脚本问题） |
+| **L0 静态验证** | 19 项检查，初测 **17 PASS / 2 FAIL**；按发现修正文档与配置后复测 **19/19 全部通过** |
 | **L1 单元/集成验证** | 4 个测试类 **13/13 全部通过**（需先修复 4 处构建阻断缺陷） |
 | **扩展评估：RAG 离线检索** | 12 条查询 **Recall@3 = 100%**（12/12）；avg_top1=0.797；平均耗时 577ms |
 | **扩展评估：Rerank A/B** | **0/12 条查询的排序/得分有差异**——pipeline 端点始终执行 qwen3-rerank，`enableReranking` 开关无效 |
@@ -16,6 +16,7 @@
 | **L2 在线验证** | **未执行**——环境缺少 MEM0 Key、钉钉 Token，Nacos 不可达；且 DashScope 对话接口**账户欠费** |
 | **构建状态** | 修复后 9 个模块**全部编译通过**；修复前仅 common 可编译 |
 | **核心发现** | 文档大部分声明可追溯；**百分比数字为估算值**；Golden Set 无执行器；项目原有 4 类构建缺陷；Rerank 声明无法在该 DashScope 端点隔离验证 |
+| **文档修正状态** | 报告 §9 的 9 条修正建议**已全部应用**（docs/05、docs/06、ExecutorNode 注释、start-backend.ps1/env.template） |
 
 **最重要发现**：验证前项目**无法构建**——`spring-ai-core` 依赖在锁定的 GA 版本中不存在、3 处源码中文引号损坏、4 处 graph-core API 不兼容。本报告第 4 节记录了为解锁测试所做的 6 处最小修复。
 
@@ -32,7 +33,7 @@
 
 | 级别 | 计划用例 | 执行 | 结果 |
 |---|---|---|---|
-| L0 静态 | V-01~V-07（20 项检查） | ✅ 全部执行 | 17 PASS / 2 FAIL |
+| L0 静态 | V-01~V-07（19 项检查） | ✅ 全部执行 | 初测 17/19，修正后 **19/19 PASS** |
 | L1 Mock 集成 | V-08~V-14（4 个测试类 13 用例） | ✅ 可执行项全部执行 | 13/13 PASS |
 | 扩展评估 | RAG 离线检索 + 压缩保真度 | ✅ 执行（部分降级） | 检索 12/12 命中；Rerank A/B 不可隔离；生成质量因欠费跳过 |
 | L2 在线 | V-15~V-20 | ⛔ 未执行 | 环境阻断（见第 8 节） |
@@ -58,12 +59,12 @@
 
 ## 5. L0 静态验证结果（脚本：`scripts/verify-static.sh`）
 
-**17 PASS / 2 FAIL**
+**初测 17 PASS / 2 FAIL → 按发现修正后复测 19/19 PASS**
 
-| 编号 | 声明 | 结果 | 证据 |
+| 编号 | 声明 | 初测结果 | 处理结果 |
 |---|---|---|---|
 | V-01 | Golden Set 共 30 条（三类各 10） | ✅ PASS | `consult/order/feedback_golden.txt` = 10/10/10 |
-| V-01b | 每条用例含 5 个核心字段 | ❌ **FAIL** | `consult_golden.txt` 用例**无 `user_id` 字段**（仅 4 字段）——与 docs/05 格式说明不符 |
+| V-01b | 用例字段契约 | ❌ FAIL | **发现**：`consult_golden.txt` 用例无 `user_id`（仅 4 字段），与 docs/05 格式说明不符。**已修正**：docs/05 补充 consult 场景 4 字段说明；脚本断言改为"order/feedback 5 字段、consult 4 字段" → 复测 PASS |
 | V-02a/b | Retry 次数=3、退避 500ms×retry | ✅ PASS | `ExecutorNode.java:46,94` |
 | V-03 | 满意度 <3.0 走告警分支 | ✅ PASS | `EvaluationAgentConfiguration.java:252` |
 | V-04a/b | 两周窗口、created_at gte/lte | ✅ PASS | `MemoryService.java:59,77-82` |
@@ -72,11 +73,11 @@
 | V-06b/c | MemorySaver Checkpoint + threadId | ✅ PASS | `OrderAgent.java:93` / `OrderAgentDebugController.java:79` |
 | V-06d | BeanOutputConverter<EvaluationResult> | ✅ PASS | `EvaluationClassifierNode.java:79` |
 | V-06e | 定时 cron（09:00 / 周一 10:00） | ✅ PASS | `LocalScheduledTrigger.java:64,83` |
-| V-06f | HITL interruptBefore(executor) | ✅ PASS | `OrderAgent.java:273` |
+| V-06f | HITL interruptBefore(executor) | ✅ PASS | `OrderAgent.java:273`（匹配模式随构建修复同步更新） |
 | V-06g | IterationNode 批量迭代 | ✅ PASS | `EvaluationAgentConfiguration.java:201` |
 | V-06h | 记忆写入 @Async | ✅ PASS | `MemoryService.java:145` |
 | V-06i | SystemMessage 注入 | ✅ PASS | `MemoryInjectNode.java:71` |
-| V-07 | rerank-top-n 三处配置一致 | ❌ **FAIL** | `application.yml`=3、`.env`=3，但 `start-backend.ps1`/`env.template`=**2** |
+| V-07 | rerank-top-n 三处配置一致 | ❌ FAIL → ✅ **已统一** | 初测 `application.yml`=3、`.env`=3，但 `start-backend.ps1`/`env.template`=**2**。**已修正**：两处脚本默认值统一为 **3**（`start-backend.ps1`、`env.template`），复测 PASS |
 
 ## 6. L1 单元/集成验证结果
 
@@ -173,17 +174,17 @@
 | M-2 | 两周窗口 | ✅ 验证 | 请求体断言通过 |
 | M-3 | SystemMessage 注入高权重 | ✅ 验证（机制） | SystemMessage 注入确认；权重差异未实测 |
 
-## 9. 文档修正建议
+## 9. 文档修正建议（2026-08-05 已全部应用 ✅）
 
-| 位置 | 现状 | 建议 |
-|---|---|---|
-| docs/06 §1 RAG | "Rerank 精排提升相关性 20-30%" | 实测发现当前 DashScope pipeline 端点**始终执行 qwen3-rerank**、`enable-reranking` 开关不生效（0/12 查询有差异）。建议：① 将"20-30%"标注为估算；② 核实 pipeline 侧 rerank 配置，若重排已默认开启，则文档应说明"重排为平台默认能力"而非可开关优化 |
-| docs/06 §3 滑动窗口 | "减少 ~60-70% 早期消息 token 消耗" | 改为实测 **~72%**（基于 14 轮对话样本），或标注为样本相关 |
-| docs/05 §3.1 单条用例格式 | 格式示例含 `user_id` 字段 | 补充说明：consult 场景用例无 `user_id`（仅 4 字段），order/feedback 含 5 字段 |
-| docs/06 §1 / start-backend.ps1 / env.template | `rerank-top-n` 默认值不一致（app.yml/.env=3，脚本=2） | 统一为同一值 |
-| docs/06 多处 | "20-30%""~60%→~90%+""~95%" 等 | 标注为**估算值**，注明需基准测试验证 |
-| docs/06 §5 或 HARNESS 计划 | "Golden Set 量化三维准确率" | 如实说明：当前仅有数据文件、**无执行器**，该能力尚未落地 |
-| `ExecutorNode.java:41` javadoc | "延迟公式：500ms × (retryCount + 1)" | 与实际 `500ms × retry`（500/1000/1500）不符，修正注释 |
+| 位置 | 现状 | 建议 | 状态 |
+|---|---|---|---|
+| docs/06 §1 RAG | "Rerank 精排提升相关性 20-30%" | 标注为估算；说明 pipeline 始终执行 qwen3-rerank、开关不生效 | ✅ 已应用（§1 注 + Rerank 节实测说明） |
+| docs/06 §3 滑动窗口 | "减少 ~60-70% 早期消息 token 消耗" | 改为实测 **~72%** | ✅ 已应用 |
+| docs/05 §3.1 单条用例格式 | 格式示例含 `user_id` 字段 | 补充 consult 场景 4 字段说明 | ✅ 已应用 |
+| docs/06 §1 / start-backend.ps1 / env.template | `rerank-top-n` 默认值不一致（脚本=2） | 统一为 3 | ✅ 已应用（ps1/env.template 改 3） |
+| docs/06 多处 | "20-30%""~60%→~90%+""~95%" 等 | 标注为估算值 | ✅ 已应用（文首全局说明） |
+| docs/06 §5 Golden Set | "量化三维准确率" | 如实说明无执行器 | ✅ 已应用（现状说明） |
+| `ExecutorNode.java:41` javadoc | "500ms × (retryCount + 1)" | 修正为 `500ms × retry` | ✅ 已应用 |
 
 ## 10. 遗留风险
 

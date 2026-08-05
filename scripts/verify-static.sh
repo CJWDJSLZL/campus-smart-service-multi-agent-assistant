@@ -24,19 +24,26 @@ c3=$(grep -c '^--- CASE' "$GOLDEN_DIR/feedback_golden.txt" 2>/dev/null || echo 0
   && check V-01 "Golden Set 共 30 条（三类各 10 条）" 0 "consult=$c1 order=$c2 feedback=$c3" \
   || check V-01 "Golden Set 共 30 条（三类各 10 条）" 1 "consult=$c1 order=$c2 feedback=$c3"
 
+# 字段契约（2026-08-05 按测试报告 V-01b 修正）：
+#   order/feedback 场景：每用例含 input/user_id/expected_agent/expected_tools/expected_output_keywords 5 字段
+#   consult 场景：政策咨询无用户身份依赖，每用例含 4 字段（不含 user_id）
 field_err=0
-for f in "$GOLDEN_DIR"/*.txt; do
+for f in "$GOLDEN_DIR/order_golden.txt" "$GOLDEN_DIR/feedback_golden.txt"; do
   cases=$(grep -c '^--- CASE' "$f")
   for field in input user_id expected_agent expected_tools expected_output_keywords; do
     cnt=$(grep -c "^${field}:" "$f")
     [ "$cnt" -eq "$cases" ] || field_err=$((field_err+1))
   done
 done
-# 说明：consult 场景为政策咨询，无用户身份依赖，用例本身不含 user_id 字段（4 字段）；
-# order/feedback 场景含完整 5 字段。docs/05 的"单条用例格式"示例将 user_id 列为必含字段，与 consult 实际格式不符。
+# consult 场景（4 字段，不含 user_id）
+cases=$(grep -c '^--- CASE' "$GOLDEN_DIR/consult_golden.txt")
+for field in input expected_agent expected_tools expected_output_keywords; do
+  cnt=$(grep -c "^${field}:" "$GOLDEN_DIR/consult_golden.txt")
+  [ "$cnt" -eq "$cases" ] || field_err=$((field_err+1))
+done
 [ "$field_err" -eq 0 ] \
-  && check V-01b "每条用例必含 5 个核心字段" 0 "order/feedback 各 10 条含 5 字段" \
-  || check V-01b "每条用例必含 5 个核心字段" 1 "字段缺失 $field_err 处（consult 场景无 user_id 属设计使然，见报告）"
+  && check V-01b "用例字段契约（order/feedback 5 字段、consult 4 字段）" 0 "30 条用例字段完整" \
+  || check V-01b "用例字段契约（order/feedback 5 字段、consult 4 字段）" 1 "字段缺失 $field_err 处"
 
 # ---------- V-02 Retry 参数 ----------
 EXEC="$ROOT/order-sub-agent/src/main/java/com/alibaba/cloud/ai/demo/node/ExecutorNode.java"
@@ -95,7 +102,7 @@ grep -Fq 'cron = "0 0 9 * * ?"' "$LS" && grep -Fq 'cron = "0 0 10 ? * MON"' "$LS
   && check V-06e "L-2: 定时 cron（每日9点/周一10点）" 0 "LocalScheduledTrigger.java:64,83" \
   || check V-06e "L-2: 定时 cron（每日9点/周一10点）" 1 "cron 表达式缺失"
 
-grep -q 'interruptBefore(List.of("executor"))' "$OAG" \
+grep -q 'interruptBefore("executor")' "$OAG" \
   && check V-06f "L-3: HITL interruptBefore(executor)" 0 "OrderAgent.java:273" \
   || check V-06f "L-3: HITL interruptBefore(executor)" 1 "未找到 interruptBefore"
 
