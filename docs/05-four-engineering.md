@@ -320,6 +320,8 @@ expected_output_keywords: [预约成功, CAMPUS_, 研讨间]
 | `expected_feedback_type` | 反馈类型（1-4） |
 | `sentiment` | 情感倾向（positive/negative/neutral） |
 
+> ⚠️ **说明（2026-08-05）**：`user_id` 并非所有场景的必含字段——**consult_golden.txt 的 10 条用例不含 `user_id`**（政策咨询场景无用户身份依赖，仅含 input/expected_agent/expected_tools/expected_output_keywords 四个字段）；order/feedback 场景用例含完整 5 字段。此差异经 `docs/08-verification-test-report.md` V-01b 静态验证确认。
+
 **覆盖的评测维度**：
 - 路由准确率（expected_agent）
 - 工具调用顺序正确性（expected_tools）

@@ -38,7 +38,7 @@ import java.util.Map;
  * 每步结果都被记录下来供 SynthesizerNode 汇总。
  *
  * <p>每个步骤失败时进行指数退避重试（最多 {@value MAX_RETRY} 次），
- * 延迟公式：500ms × (retryCount + 1)。
+ * 延迟公式：500ms × retry（第 1 次重试 500ms、第 2 次 1000ms、第 3 次 1500ms）。
  */
 public class ExecutorNode implements NodeAction {
 
