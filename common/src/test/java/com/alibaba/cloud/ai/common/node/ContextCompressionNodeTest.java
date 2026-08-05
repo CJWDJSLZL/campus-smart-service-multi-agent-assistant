@@ -117,4 +117,22 @@ class ContextCompressionNodeTest {
                 + " (原始 " + originalChars + " 字符 -> 压缩后 " + compressedChars + " 字符)");
         assertThat(reduction).isGreaterThan(30.0);
     }
+
+    @Test
+    void 压缩摘要保留关键实体_压缩保真度() throws Exception {
+        // 关键实体：服务名称、记录编号（CAMPUS_xxx）、时间偏好
+        List<Message> messages = buildMessages(14); // 28 条
+        OverAllState state = mock(OverAllState.class);
+        when(state.value("messages")).thenReturn(Optional.of(messages));
+        Map<String, Object> result = node.apply(state);
+
+        List<Message> compressed = (List<Message>) result.get("messages");
+        String summary = compressed.get(0).getText();
+
+        // 摘要中必须保留关键实体（用正则/关键词核对，作为压缩保真度代理）
+        assertThat(summary).contains("奖学金");
+        assertThat(summary).contains("研讨间");
+        assertThat(summary).containsPattern("CAMPUS_\\d{4,}");
+        System.out.println("[V-08b] 压缩摘要关键实体保留: 奖学金/研讨间/CAMPUS_编号 均命中 -> 摘要=" + summary);
+    }
 }
