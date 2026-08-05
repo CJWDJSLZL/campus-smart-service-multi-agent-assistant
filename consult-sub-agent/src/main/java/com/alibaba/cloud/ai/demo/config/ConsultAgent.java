@@ -157,7 +157,7 @@ public class ConsultAgent {
 				.addNode("react_agent", node_async(state -> {
 					Map<String, Object> agentInput = new HashMap<>();
 					agentInput.put("messages", state.value("messages").orElse(List.of()));
-					return reactAgent.getCompiledGraph().invoke(agentInput)
+					return reactAgent.getAndCompileGraph().invoke(agentInput)
 					.map(com.alibaba.cloud.ai.graph.OverAllState::data)
 					.orElse(Map.of());
 				}))
@@ -194,7 +194,7 @@ public class ConsultAgent {
 				.addNode("react_agent", node_async(state -> {
 					Map<String, Object> agentInput = new HashMap<>();
 					agentInput.put("messages", state.value("messages").orElse(List.of()));
-					return reactAgent.getCompiledGraph().invoke(agentInput)
+					return reactAgent.getAndCompileGraph().invoke(agentInput)
 					.map(com.alibaba.cloud.ai.graph.OverAllState::data)
 					.orElse(Map.of());
 				}))
@@ -234,7 +234,7 @@ public class ConsultAgent {
 				.addNode("react_agent", node_async(state -> {
 					Map<String, Object> agentInput = new HashMap<>();
 					agentInput.put("messages", state.value("messages").orElse(List.of()));
-					return reactAgent.getCompiledGraph().invoke(agentInput)
+					return reactAgent.getAndCompileGraph().invoke(agentInput)
 					.map(com.alibaba.cloud.ai.graph.OverAllState::data)
 					.orElse(Map.of());
 				}))
