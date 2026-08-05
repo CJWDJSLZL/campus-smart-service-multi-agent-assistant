@@ -1,0 +1,677 @@
+{
+  "mode": "proxy",
+  "total": 30,
+  "route_accuracy": 100.0,
+  "tool_exact_accuracy": 10.7,
+  "tool_first_accuracy": 14.3,
+  "keyword_accuracy": 75.3,
+  "details": [
+    {
+      "id": "CASE_C001",
+      "input": "奖学金怎么申请？",
+      "expectedAgent": "consult_agent",
+      "predAgent": "consult_agent",
+      "route_ok": true,
+      "expectedTools": [
+        "consult-search-knowledge"
+      ],
+      "predTools": [
+        "memory-search",
+        "consult-search-knowledge"
+      ],
+      "tools_ok": false,
+      "first_tool_ok": false,
+      "keywords_hit": [
+        "申请",
+        "材料",
+        "条件",
+        "流程"
+      ],
+      "keywords_total": 4,
+      "kw_ok": true
+    },
+    {
+      "id": "CASE_C002",
+      "input": "转专业需要什么条件？",
+      "expectedAgent": "consult_agent",
+      "predAgent": "consult_agent",
+      "route_ok": true,
+      "expectedTools": [
+        "consult-search-knowledge"
+      ],
+      "predTools": [
+        "memory-search",
+        "consult-search-knowledge"
+      ],
+      "tools_ok": false,
+      "first_tool_ok": false,
+      "keywords_hit": [
+        "条件",
+        "成绩",
+        "申请",
+        "教务"
+      ],
+      "keywords_total": 4,
+      "kw_ok": true
+    },
+    {
+      "id": "CASE_C003",
+      "input": "图书馆研讨间有什么预约规则？",
+      "expectedAgent": "consult_agent",
+      "predAgent": "consult_agent",
+      "route_ok": true,
+      "expectedTools": [
+        "consult-search-knowledge",
+        "consult-get-product-info"
+      ],
+      "predTools": [
+        "memory-search",
+        "consult-search-knowledge",
+        "consult-search-products"
+      ],
+      "tools_ok": false,
+      "first_tool_ok": false,
+      "keywords_hit": [
+        "预约",
+        "时间",
+        "人数",
+        "校园卡"
+      ],
+      "keywords_total": 4,
+      "kw_ok": true
+    },
+    {
+      "id": "CASE_C004",
+      "input": "在读证明用来做什么？",
+      "expectedAgent": "consult_agent",
+      "predAgent": "consult_agent",
+      "route_ok": true,
+      "expectedTools": [
+        "consult-search-knowledge"
+      ],
+      "predTools": [
+        "memory-search",
+        "consult-search-knowledge"
+      ],
+      "tools_ok": false,
+      "first_tool_ok": false,
+      "keywords_hit": [
+        "实习",
+        "签证",
+        "竞赛",
+        "线上"
+      ],
+      "keywords_total": 4,
+      "kw_ok": true
+    },
+    {
+      "id": "CASE_C005",
+      "input": "困难生认定需要哪些材料？",
+      "expectedAgent": "consult_agent",
+      "predAgent": "consult_agent",
+      "route_ok": true,
+      "expectedTools": [
+        "consult-search-knowledge"
+      ],
+      "predTools": [
+        "memory-search",
+        "consult-search-knowledge"
+      ],
+      "tools_ok": false,
+      "first_tool_ok": false,
+      "keywords_hit": [
+        "调查表",
+        "证明",
+        "学院",
+        "辅导员"
+      ],
+      "keywords_total": 4,
+      "kw_ok": true
+    },
+    {
+      "id": "CASE_C006",
+      "input": "课程退选什么时候截止？",
+      "expectedAgent": "consult_agent",
+      "predAgent": "consult_agent",
+      "route_ok": true,
+      "expectedTools": [
+        "consult-search-knowledge"
+      ],
+      "predTools": [
+        "memory-search",
+        "consult-search-knowledge"
+      ],
+      "tools_ok": false,
+      "first_tool_ok": false,
+      "keywords_hit": [
+        "退课",
+        "截止",
+        "补退选",
+        "开学"
+      ],
+      "keywords_total": 4,
+      "kw_ok": true
+    },
+    {
+      "id": "CASE_C007",
+      "input": "校园卡丢了怎么办？",
+      "expectedAgent": "consult_agent",
+      "predAgent": "consult_agent",
+      "route_ok": true,
+      "expectedTools": [
+        "consult-search-knowledge",
+        "consult-get-product-info"
+      ],
+      "predTools": [
+        "memory-search",
+        "consult-search-knowledge",
+        "consult-get-product-info"
+      ],
+      "tools_ok": false,
+      "first_tool_ok": false,
+      "keywords_hit": [
+        "挂失",
+        "补办",
+        "校园卡中心",
+        "工本费"
+      ],
+      "keywords_total": 4,
+      "kw_ok": true
+    },
+    {
+      "id": "CASE_C008",
+      "input": "宿舍报修流程是什么？",
+      "expectedAgent": "consult_agent",
+      "predAgent": "consult_agent",
+      "route_ok": true,
+      "expectedTools": [
+        "consult-search-knowledge"
+      ],
+      "predTools": [
+        "memory-search",
+        "consult-search-knowledge"
+      ],
+      "tools_ok": false,
+      "first_tool_ok": false,
+      "keywords_hit": [
+        "报修",
+        "后勤",
+        "宿舍",
+        "故障"
+      ],
+      "keywords_total": 4,
+      "kw_ok": true
+    },
+    {
+      "id": "CASE_C009",
+      "input": "有哪些校园服务可以预约？",
+      "expectedAgent": "consult_agent",
+      "predAgent": "consult_agent",
+      "route_ok": true,
+      "expectedTools": [
+        "consult-get-products"
+      ],
+      "predTools": [
+        "consult-get-products"
+      ],
+      "tools_ok": true,
+      "first_tool_ok": true,
+      "keywords_hit": [
+        "图书馆",
+        "心理咨询",
+        "体育馆",
+        "宿舍报修"
+      ],
+      "keywords_total": 4,
+      "kw_ok": true
+    },
+    {
+      "id": "CASE_C010",
+      "input": "社团活动场地怎么申请？",
+      "expectedAgent": "consult_agent",
+      "predAgent": "consult_agent",
+      "route_ok": true,
+      "expectedTools": [
+        "consult-search-knowledge"
+      ],
+      "predTools": [
+        "memory-search",
+        "consult-search-knowledge",
+        "consult-search-products"
+      ],
+      "tools_ok": false,
+      "first_tool_ok": false,
+      "keywords_hit": [
+        "场地",
+        "申请",
+        "学生工作处",
+        "提前"
+      ],
+      "keywords_total": 4,
+      "kw_ok": true
+    },
+    {
+      "id": "CASE_F001",
+      "input": "宿舍空调修了三天了还没来，太慢了！",
+      "expectedAgent": "feedback_agent",
+      "predAgent": "feedback_agent",
+      "route_ok": true,
+      "expectedTools": [
+        "feedback-create-feedback"
+      ],
+      "predTools": [
+        "memory-search",
+        "feedback-create-feedback"
+      ],
+      "tools_ok": false,
+      "first_tool_ok": false,
+      "keywords_hit": [
+        "抱歉",
+        "后勤"
+      ],
+      "keywords_total": 3,
+      "kw_ok": false
+    },
+    {
+      "id": "CASE_F002",
+      "input": "图书馆服务很好，希望增加设备状态提示",
+      "expectedAgent": "feedback_agent",
+      "predAgent": "feedback_agent",
+      "route_ok": true,
+      "expectedTools": [
+        "feedback-create-feedback"
+      ],
+      "predTools": [
+        "memory-search",
+        "feedback-create-feedback"
+      ],
+      "tools_ok": false,
+      "first_tool_ok": false,
+      "keywords_hit": [
+        "感谢",
+        "建议",
+        "记录"
+      ],
+      "keywords_total": 3,
+      "kw_ok": true
+    },
+    {
+      "id": "CASE_F003",
+      "input": "校园卡补办流程很顺畅，5分",
+      "expectedAgent": "feedback_agent",
+      "predAgent": "feedback_agent",
+      "route_ok": true,
+      "expectedTools": [
+        "feedback-create-feedback"
+      ],
+      "predTools": [
+        "memory-search",
+        "feedback-create-feedback"
+      ],
+      "tools_ok": false,
+      "first_tool_ok": false,
+      "keywords_hit": [
+        "评价"
+      ],
+      "keywords_total": 2,
+      "kw_ok": false
+    },
+    {
+      "id": "CASE_F004",
+      "input": "建议图书馆周末延长开放时间到22点",
+      "expectedAgent": "feedback_agent",
+      "predAgent": "feedback_agent",
+      "route_ok": true,
+      "expectedTools": [
+        "feedback-create-feedback"
+      ],
+      "predTools": [
+        "feedback-create-feedback"
+      ],
+      "tools_ok": true,
+      "first_tool_ok": true,
+      "keywords_hit": [
+        "建议"
+      ],
+      "keywords_total": 3,
+      "kw_ok": false
+    },
+    {
+      "id": "CASE_F005",
+      "input": "我投诉教务窗口态度太差",
+      "expectedAgent": "feedback_agent",
+      "predAgent": "feedback_agent",
+      "route_ok": true,
+      "expectedTools": [
+        "feedback-create-feedback"
+      ],
+      "predTools": [
+        "memory-search",
+        "feedback-create-feedback"
+      ],
+      "tools_ok": false,
+      "first_tool_ok": false,
+      "keywords_hit": [
+        "抱歉",
+        "投诉"
+      ],
+      "keywords_total": 3,
+      "kw_ok": false
+    },
+    {
+      "id": "CASE_F006",
+      "input": "对上次宿舍报修服务满意，师傅很专业",
+      "expectedAgent": "feedback_agent",
+      "predAgent": "feedback_agent",
+      "route_ok": true,
+      "expectedTools": [
+        "feedback-get-feedback-by-user",
+        "feedback-create-feedback"
+      ],
+      "predTools": [
+        "memory-search",
+        "feedback-create-feedback"
+      ],
+      "tools_ok": false,
+      "first_tool_ok": false,
+      "keywords_hit": [
+        "感谢",
+        "评价",
+        "记录"
+      ],
+      "keywords_total": 3,
+      "kw_ok": true
+    },
+    {
+      "id": "CASE_F007",
+      "input": "心理咨询预约系统有 bug，选不了时间",
+      "expectedAgent": "feedback_agent",
+      "predAgent": "feedback_agent",
+      "route_ok": true,
+      "expectedTools": [
+        "feedback-create-feedback"
+      ],
+      "predTools": [
+        "memory-search",
+        "feedback-create-feedback"
+      ],
+      "tools_ok": false,
+      "first_tool_ok": false,
+      "keywords_hit": [
+        "反馈"
+      ],
+      "keywords_total": 3,
+      "kw_ok": false
+    },
+    {
+      "id": "CASE_F008",
+      "input": "社团场地申请太麻烦了，审批流程能简化吗？",
+      "expectedAgent": "feedback_agent",
+      "predAgent": "feedback_agent",
+      "route_ok": true,
+      "expectedTools": [
+        "feedback-create-feedback"
+      ],
+      "predTools": [
+        "memory-search",
+        "feedback-create-feedback"
+      ],
+      "tools_ok": false,
+      "first_tool_ok": false,
+      "keywords_hit": [
+        "建议",
+        "简化"
+      ],
+      "keywords_total": 3,
+      "kw_ok": false
+    },
+    {
+      "id": "CASE_F009",
+      "input": "我很不满意，宿管晚上查寝动静太大",
+      "expectedAgent": "feedback_agent",
+      "predAgent": "feedback_agent",
+      "route_ok": true,
+      "expectedTools": [
+        "feedback-create-feedback"
+      ],
+      "predTools": [
+        "memory-search",
+        "feedback-create-feedback"
+      ],
+      "tools_ok": false,
+      "first_tool_ok": false,
+      "keywords_hit": [
+        "理解",
+        "投诉"
+      ],
+      "keywords_total": 3,
+      "kw_ok": false
+    },
+    {
+      "id": "CASE_F010",
+      "input": "在读证明线上办理很方便，希望增加审核进度查询",
+      "expectedAgent": "feedback_agent",
+      "predAgent": "feedback_agent",
+      "route_ok": true,
+      "expectedTools": [
+        "feedback-create-feedback"
+      ],
+      "predTools": [
+        "memory-search",
+        "feedback-create-feedback"
+      ],
+      "tools_ok": false,
+      "first_tool_ok": false,
+      "keywords_hit": [
+        "感谢",
+        "建议",
+        "进度"
+      ],
+      "keywords_total": 3,
+      "kw_ok": true
+    },
+    {
+      "id": "CASE_O001",
+      "input": "帮我预约图书馆研讨间，明天下午，4个人",
+      "expectedAgent": "order_agent",
+      "predAgent": "order_agent",
+      "route_ok": true,
+      "expectedTools": [
+        "campus-validate-service-item",
+        "campus-check-service-capacity",
+        "campus-create-service-record"
+      ],
+      "predTools": [
+        "memory-search",
+        "campus-validate-service-item",
+        "campus-check-service-capacity"
+      ],
+      "tools_ok": false,
+      "first_tool_ok": false,
+      "keywords_hit": [
+        "研讨间"
+      ],
+      "keywords_total": 3,
+      "kw_ok": false
+    },
+    {
+      "id": "CASE_O002",
+      "input": "我想申请在读证明，用于实习报名",
+      "expectedAgent": "order_agent",
+      "predAgent": "order_agent",
+      "route_ok": true,
+      "expectedTools": [
+        "campus-create-service-record"
+      ],
+      "predTools": [
+        "campus-validate-service-item"
+      ],
+      "tools_ok": false,
+      "first_tool_ok": false,
+      "keywords_hit": [
+        "在读证明"
+      ],
+      "keywords_total": 3,
+      "kw_ok": false
+    },
+    {
+      "id": "CASE_O003",
+      "input": "查一下我最近的预约记录",
+      "expectedAgent": "order_agent",
+      "predAgent": "order_agent",
+      "route_ok": true,
+      "expectedTools": [
+        "campus-get-service-records-by-user"
+      ],
+      "predTools": [
+        "campus-get-latest-service-record-by-user"
+      ],
+      "tools_ok": false,
+      "first_tool_ok": false,
+      "keywords_hit": [
+        "服务事项"
+      ],
+      "keywords_total": 3,
+      "kw_ok": false
+    },
+    {
+      "id": "CASE_O004",
+      "input": "取消我的 CAMPUS_20260601001 这条预约",
+      "expectedAgent": "order_agent",
+      "predAgent": "order_agent",
+      "route_ok": true,
+      "expectedTools": [
+        "campus-cancel-service-record"
+      ],
+      "predTools": [
+        "campus-get-service-record-by-user"
+      ],
+      "tools_ok": false,
+      "first_tool_ok": false,
+      "keywords_hit": [
+        "取消成功"
+      ],
+      "keywords_total": 1,
+      "kw_ok": true
+    },
+    {
+      "id": "CASE_O005",
+      "input": "修改一下我的预约备注，改成\"需要投影仪\"",
+      "expectedAgent": "order_agent",
+      "predAgent": "order_agent",
+      "route_ok": true,
+      "expectedTools": [
+        "campus-get-service-records-by-user",
+        "campus-update-service-record-remark"
+      ],
+      "predTools": [
+        "campus-get-service-records-by-user"
+      ],
+      "tools_ok": false,
+      "first_tool_ok": true,
+      "keywords_hit": [],
+      "keywords_total": 2,
+      "kw_ok": false
+    },
+    {
+      "id": "CASE_O006",
+      "input": "按上次一样再预约一次",
+      "expectedAgent": "order_agent",
+      "predAgent": "order_agent",
+      "route_ok": true,
+      "expectedTools": [
+        "campus-get-latest-service-record-by-user"
+      ],
+      "predTools": [],
+      "tools_ok": false,
+      "first_tool_ok": false,
+      "keywords_hit": [
+        "上次",
+        "确认",
+        "预约"
+      ],
+      "keywords_total": 3,
+      "kw_ok": true
+    },
+    {
+      "id": "CASE_O007",
+      "input": "预约体育馆羽毛球场，明天上午2小时",
+      "expectedAgent": "order_agent",
+      "predAgent": "order_agent",
+      "route_ok": true,
+      "expectedTools": [
+        "campus-validate-service-item",
+        "campus-check-service-capacity",
+        "campus-create-service-record"
+      ],
+      "predTools": [
+        "memory-search",
+        "campus-validate-service-item",
+        "campus-check-service-capacity"
+      ],
+      "tools_ok": false,
+      "first_tool_ok": false,
+      "keywords_hit": [
+        "体育馆"
+      ],
+      "keywords_total": 3,
+      "kw_ok": false
+    },
+    {
+      "id": "CASE_O008",
+      "input": "帮我预约",
+      "expectedAgent": "order_agent",
+      "predAgent": "order_agent",
+      "route_ok": true,
+      "expectedTools": [],
+      "predTools": [],
+      "tools_ok": false,
+      "first_tool_ok": false,
+      "keywords_hit": [],
+      "keywords_total": 2,
+      "kw_ok": false
+    },
+    {
+      "id": "CASE_O009",
+      "input": "宿舍空调坏了，帮我报修",
+      "expectedAgent": "order_agent",
+      "predAgent": "order_agent",
+      "route_ok": true,
+      "expectedTools": [
+        "campus-create-service-record"
+      ],
+      "predTools": [
+        "campus-validate-service-item"
+      ],
+      "tools_ok": false,
+      "first_tool_ok": false,
+      "keywords_hit": [],
+      "keywords_total": 2,
+      "kw_ok": false
+    },
+    {
+      "id": "CASE_O010",
+      "input": "我预约了心理咨询，想看看名额还剩多少",
+      "expectedAgent": "order_agent",
+      "predAgent": "order_agent",
+      "route_ok": true,
+      "expectedTools": [
+        "campus-check-service-capacity"
+      ],
+      "predTools": [
+        "campus-check-service-capacity"
+      ],
+      "tools_ok": true,
+      "first_tool_ok": true,
+      "keywords_hit": [
+        "名额",
+        "心理咨询"
+      ],
+      "keywords_total": 2,
+      "kw_ok": true
+    }
+  ],
+  "tool_exact_accuracy_filtered": 62.1,
+  "tool_first_accuracy_filtered": 79.3,
+  "tool_note": "过滤 infrastructure 工具(memory-search)后；memory-search 为 MemoryInjectNode 预节点，Golden Set expected_tools 仅计业务工具序列"
+}

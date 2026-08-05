@@ -99,6 +99,15 @@ def summarize_incremental(old_summary, batch_msgs):
     return chat(sys_p, text)
 
 
+def summarize_incremental_diff(old_summary, batch_msgs):
+    """增量差异摘要：仅输出新片段中的【新增】关键事实，不重写完整摘要"""
+    text = f"【已有摘要】\n{old_summary}\n\n新对话片段：\n" + fmt_messages(batch_msgs)
+    sys_p = ("你已有一段历史对话摘要。请从新对话片段中提取【新增】的关键事实"
+             "（记录编号、服务名称、时间偏好、办理状态等），每行一条。"
+             "不要重复已有摘要中已出现的内容，不要输出完整摘要，只输出新增事实。")
+    return chat(sys_p, text)
+
+
 def run_sliding_window(trace):
     """滑动窗口策略：超 20 条时一次性重摘要全部早期消息，保留最近 6 条"""
     messages = []
@@ -147,6 +156,34 @@ def run_incremental(trace):
             "total_out": total_out, "final_msgs": len(messages), "summary": summary}
 
 
+def run_incremental_diff(trace):
+    """增量差异策略：仅把新片段的新增事实追加进运行摘要（输出 token 最小化）"""
+    messages = []
+    summary = ""
+    calls, max_prompt, total_in, total_out = 0, 0, 0, 0
+    for role, text in trace:
+        messages.append((role, text))
+        if len(messages) > MAX_MESSAGES:
+            compress_end = len(messages) - KEEP_RECENT
+            start = 1 if messages and messages[0][0] == "system" else 0
+            batch_end = min(compress_end, start + BATCH)
+            if batch_end > start:
+                batch = messages[start:batch_end]
+                content, usage = summarize_incremental_diff(summary, batch)
+                calls += 1
+                p, o = usage.get("prompt_tokens", 0), usage.get("completion_tokens", 0)
+                max_prompt = max(max_prompt, p)
+                total_in += p
+                total_out += o
+                # 追加新增事实，同样按 600 字符上限
+                summary = (summary + "\n" + content).strip()
+                if len(summary) > SUMMARY_MAX_CHARS:
+                    summary = summary[:SUMMARY_MAX_CHARS] + "…"
+                messages = [("system", "【历史对话摘要】" + summary)] + messages[batch_end:]
+    return {"calls": calls, "max_prompt": max_prompt, "total_in": total_in,
+            "total_out": total_out, "final_msgs": len(messages), "summary": summary}
+
+
 def entity_recall(summary, ever_seen):
     ids = set(CAMPUS_RE.findall(summary))
     return round(len(ids) / len(ever_seen) * 100, 1)
@@ -159,31 +196,41 @@ def main():
     trace, ever_seen = build_trace()
     print(f"真实 LLM 对比开始 | model={MODEL} | 40 轮对话，去重实体 {len(ever_seen)} 个\n")
 
-    print("[1/2] 滑动窗口策略运行中...")
+    print("[1/3] 滑动窗口策略运行中...")
     sw = run_sliding_window(trace)
-    print("[2/2] 增量滚动摘要策略运行中...")
+    print("[2/3] 增量滚动摘要（合并）策略运行中...")
     inc = run_incremental(trace)
+    print("[3/3] 增量滚动摘要（差异追加）策略运行中...")
+    diff_run = run_incremental_diff(trace)
 
     sw_recall = entity_recall(sw["summary"], ever_seen)
     inc_recall = entity_recall(inc["summary"], ever_seen)
+    diff_recall = entity_recall(diff_run["summary"], ever_seen)
 
-    def diff(b, a):
+    def dv(b, a):
         return "N/A" if b == 0 else f"{((a - b) / b * 100):+.1f}%"
 
     print("\n========== 压缩策略真实 LLM 对比（40 轮，qwen-plus） ==========")
-    print("| 指标                         | 滑动窗口(before) | 增量滚动摘要(after) | 变化 |")
-    print(f"| 摘要调用次数                  | {sw['calls']:>15} | {inc['calls']:>17} | {diff(sw['calls'], inc['calls'])} |")
-    print(f"| 单次最大 prompt token         | {sw['max_prompt']:>15} | {inc['max_prompt']:>17} | {diff(sw['max_prompt'], inc['max_prompt'])} |")
-    print(f"| 累计输入 token                | {sw['total_in']:>15} | {inc['total_in']:>17} | {diff(sw['total_in'], inc['total_in'])} |")
-    print(f"| 累计输出 token                | {sw['total_out']:>15} | {inc['total_out']:>17} | {diff(sw['total_out'], inc['total_out'])} |")
-    print(f"| 总 token(输入+输出)           | {sw['total_in'] + sw['total_out']:>15} | {inc['total_in'] + inc['total_out']:>17} | {diff(sw['total_in'] + sw['total_out'], inc['total_in'] + inc['total_out'])} |")
-    print(f"| 最终消息条数                  | {sw['final_msgs']:>15} | {inc['final_msgs']:>17} | {diff(sw['final_msgs'], inc['final_msgs'])} |")
-    print(f"| 摘要实体保留率(%)             | {sw_recall:>15.1f} | {inc_recall:>17.1f} | {diff(sw_recall, inc_recall)} |")
+    print("| 指标                         | 滑动窗口 | 增量·合并 | 增量·差异 | vs滑动窗口 | vs合并 |")
+    rows = [
+        ("摘要调用次数", lambda r: r["calls"], lambda r: r["calls"]),
+        ("单次最大 prompt token", lambda r: r["max_prompt"], lambda r: r["max_prompt"]),
+        ("累计输入 token", lambda r: r["total_in"], lambda r: r["total_in"]),
+        ("累计输出 token", lambda r: r["total_out"], lambda r: r["total_out"]),
+        ("总 token(输入+输出)", lambda r: r["total_in"] + r["total_out"], lambda r: r["total_in"] + r["total_out"]),
+        ("最终消息条数", lambda r: r["final_msgs"], lambda r: r["final_msgs"]),
+    ]
+    for name, fa, fb in rows:
+        b, a, c = fa(sw), fb(inc), fb(diff_run)
+        print(f"| {name:<26} | {b:>7} | {a:>7} | {c:>7} | {dv(b, c):>7} | {dv(a, c):>7} |")
+
+    print(f"| 摘要实体保留率(%)            | {sw_recall:>7.1f} | {inc_recall:>7.1f} | {diff_recall:>7.1f} | {dv(sw_recall, diff_recall):>7} | {dv(inc_recall, diff_recall):>7} |")
 
     result = {
         "model": MODEL, "turns": TURNS, "batch": BATCH,
         "sliding_window": {**sw, "entity_recall_pct": sw_recall},
-        "incremental": {**inc, "entity_recall_pct": inc_recall},
+        "incremental_merge": {**inc, "entity_recall_pct": inc_recall},
+        "incremental_diff": {**diff_run, "entity_recall_pct": diff_recall},
     }
     out = os.path.join(ROOT, "scripts", "compare_compression_real_result.json")
     with open(out, "w", encoding="utf-8") as f:

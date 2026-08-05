@@ -4,20 +4,29 @@
   "batch": 10,
   "sliding_window": {
     "calls": 5,
-    "max_prompt": 2240,
-    "total_in": 7714,
-    "total_out": 397,
+    "max_prompt": 2254,
+    "total_in": 7712,
+    "total_out": 403,
     "final_msgs": 18,
-    "summary": "用户为学生，已连续办理32次奖学金申请（CAMPUS_1000至CAMPUS_1032），每次均基于“GPA达标+材料提交”条件自动完成；所有办理均明确标注“时间偏好晚上”；最新一次（第32轮）办理记录编号为CAMPUS_1032。",
+    "summary": "用户为学生，已累计办理32次奖学金申请服务（记录编号CAMPUS_1000–CAMPUS_1032）；所有申请均严格依据“GPA达标并提交材料”这一核心条件自动执行，并按其设定的晚间时间偏好完成；最新一次为第32轮申请，已生成记录编号CAMPUS_1032。",
     "entity_recall_pct": 5.0
   },
-  "incremental": {
+  "incremental_merge": {
     "calls": 7,
-    "max_prompt": 1595,
-    "total_in": 8913,
-    "total_out": 2669,
+    "max_prompt": 1528,
+    "total_in": 8600,
+    "total_out": 1744,
     "final_msgs": 19,
-    "summary": "【更新后摘要】  \n用户连续三十二轮（第0轮至第31轮）询问“奖学金申请条件和办理流程步骤”，每次均获得一致答复：需GPA达标并提交材料；且每次均确认已为用户办理，对应唯一标识分别为：  \nCAMPUS_1000、CAMPUS_1001、CAMPUS_1002、CAMPUS_1003、CAMPUS_1004、CAMPUS_1005、CAMPUS_1006、CAMPUS_1007、CAMPUS_1008、CAMPUS_1009、CAMPUS_1010、CAMPUS_1011、CAMPUS_1012、CAMPUS_1013、CAMPUS_1014、CAMPUS_1015、CAMPUS_1016、CAMPUS_1017、CAMPUS_1018、CAMPUS_1019、CAMPUS_1020、CAMPUS_1021、CAMPUS_1022、CAMPUS_1023、CAMPUS_1024、CAMPUS_1025、CAMPUS_1026、CAMPUS_1027、CAMPUS_1028、CAMPUS_1029、CAMPUS_1030、CAMPUS_1031；  \n所有轮次中用户明确表达的时间偏好均为“晚上”；  \n第19–22轮的办理记录已通过工具明确验证：CAMPUS_1019为第19轮合法编号，且系统返回的办理记录详情中唯一有效预约编号为CAMPUS_1019（其余重复冗余字段为系统输出噪声…",
-    "entity_recall_pct": 80.0
+    "summary": "【更新后摘要】  \n用户连续三十二轮（第0轮至第31轮）询问“奖学金申请条件和办理流程步骤”，每次均获得相同核心答复：需GPA达标并提交材料；每次均确认已为用户办理，对应唯一标识分别为 CAMPUS_1000 至 CAMPUS_1031（共32个连续编号）；所有回复均明确用户时间偏好为晚上。其中，第19轮至第26轮的办理记录已通过工具确认，对应预约编号 CAMPUS_1019（第19轮）、CAMPUS_1020（第20轮）、CAMPUS_1021（第21轮）、CAMPUS_1022（第22轮）、CAMPUS_1023（第23轮）、CAMPUS_1024（第24轮）、CAMPUS_1025（第25轮）、CAMPUS_1026（第26轮），服务名称均为“奖学金申请”，办理状态均为“已办理”，经办人为系统自动处理，时间偏好均为晚上。第27轮至第31轮的办理记录亦已确认：CAMPUS_1027（第27轮）、CAMPUS_1028（第28轮）、CAMPUS_1029（第29轮，工具返回明确验证信息）、CAMPUS_1030（第30轮）、CAMPUS_1031（第31轮），服务名称均为“奖学金申请”，办理状态均为“已办理”，经办人为系统自动处理，时间偏好均为晚上。所有32轮交互均严格遵循同一应答模板与办理逻辑，无例外或变更。",
+    "entity_recall_pct": 35.0
+  },
+  "incremental_diff": {
+    "calls": 7,
+    "max_prompt": 1558,
+    "total_in": 8977,
+    "total_out": 679,
+    "final_msgs": 19,
+    "summary": "CAMPUS_1000，时间偏好晚上，办理状态：已办理  \nCAMPUS_1001，时间偏好晚上，办理状态：已办理  \nCAMPUS_1002，时间偏好晚上，办理状态：已办理  \nCAMPUS_1003，时间偏好晚上，办理状态：已办理  \nCAMPUS_1004，时间偏好晚上，办理状态：已办理\nCAMPUS_1005，时间偏好晚上，办理状态：已办理  \nCAMPUS_1006，时间偏好晚上，办理状态：已办理  \nCAMPUS_1007，时间偏好晚上，办理状态：已办理  \nCAMPUS_1008，时间偏好晚上，办理状态：已办理\nCAMPUS_1009，时间偏好晚上，办理状态：已办理  \nCAMPUS_1010，时间偏好晚上，办理状态：已办理  \nCAMPUS_1011，时间偏好晚上，办理状态：已办理  \nCAMPUS_1012，时间偏好晚上，办理状态：已办理  \nCAMPUS_1013，时间偏好晚上，办理状态：已办理\nCAMPUS_1014，服务名称：奖学金申请，时间偏好晚上，办理状态：已办理  \nCAMPUS_1015，服务名称：奖学金申请，时间偏好晚上，办理状态：已办理  \nCAMPUS_1016，服务名称：奖学金申请，时间偏好晚上，办理状态：已办理  \nCAMPUS_1017，服务名称：奖学金申请，时间偏好晚上，办理状态：已办理\nCAMPUS_1018，时间偏好晚上，办理状态：…",
+    "entity_recall_pct": 47.5
   }
 }
