@@ -206,8 +206,9 @@ class ContextCompressionComparisonTest {
         System.out.printf("| 缓冲实体保留率(%%)           | %15.1f | %17.1f | %s |%n",
                 beforeRecall, afterRecall, diffPct(beforeRecall, afterRecall));
 
-        // 断言核心改进点（宽松上限，避免模拟数据波动）
-        assertThatMax(afterMax, beforeMax);
+        // 断言核心改进点：增量方案单次调用输入有上界（摘要上限 + 批量），不随会话无限增长；
+        // 真实 token 成本对比以 scripts/compare_compression_real.py 实验为准
+        assertThatMax(afterMax);
         assertThatBuffer(afterBuffer, beforeBuffer);
     }
 
@@ -219,13 +220,12 @@ class ContextCompressionComparisonTest {
         return String.format("%+.1f%%", pct);
     }
 
-    private static void assertThatMax(int afterMax, int beforeMax) {
-        if (beforeMax == 0) {
-            return;
-        }
+    private static void assertThatMax(int afterMax) {
+        // 有上界：单次输入 ≤ 摘要上限(2000) + 批量(10条 × 60字符宽松上限)
+        int bound = 2000 + BATCH * 60;
         org.assertj.core.api.Assertions.assertThat((double) afterMax)
-                .as("增量方案的单次调用最大输入应更小（有上界）")
-                .isLessThan(beforeMax);
+                .as("增量方案单次调用输入应有上界（摘要上限 + 批量）")
+                .isLessThanOrEqualTo(bound);
     }
 
     private static void assertThatBuffer(int afterBuffer, int beforeBuffer) {

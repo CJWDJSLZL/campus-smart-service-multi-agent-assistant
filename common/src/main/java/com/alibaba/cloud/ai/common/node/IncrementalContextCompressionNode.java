@@ -162,7 +162,9 @@ public class IncrementalContextCompressionNode implements NodeAction {
 
     /**
      * 增量摘要：把新片段合并进已有摘要。
-     * 首次（无已有摘要）使用"从零提炼"Prompt，之后使用"合并更新"Prompt。
+     * 首次（无已有摘要）使用"从零提炼"Prompt；
+     * 之后使用"仅输出新增事实"的差异 Prompt，并在代码中将新增事实追加进已有摘要——
+     * 相比"每次重写完整摘要"，显著降低输出 token 膨胀（实测 -61%，见 docs/08 §6.6.4）。
      */
     private String summarize(String oldSummary, List<Message> batch) {
         StringBuilder historyText = new StringBuilder();
@@ -179,19 +181,21 @@ public class IncrementalContextCompressionNode implements NodeAction {
             systemPrompt = "请用 3-5 句话提炼以下对话历史的关键信息，"
                     + "保留用户身份、已办理/查询的服务名称、关键数据（记录编号、时间偏好等）：";
         } else {
-            systemPrompt = "你已有一段历史对话摘要。请将以下新对话片段合并进已有摘要，生成更新后的摘要。"
-                    + "必须保留已有摘要中的所有关键事实，并纳入新片段中的关键信息。"
-                    + "不要删除或弱化已有摘要中的任何关键实体。";
+            systemPrompt = "你已有一段历史对话摘要。请从新对话片段中提取【新增】的关键事实"
+                    + "（记录编号、服务名称、时间偏好、办理状态等），每行一条。"
+                    + "不要重复已有摘要中已出现的内容，不要输出完整摘要，只输出新增事实。";
         }
 
-        String summary = chatClient.prompt()
+        String content = chatClient.prompt()
                 .system(systemPrompt)
                 .user(historyText.toString())
                 .call()
                 .content();
-        if (summary == null || summary.isBlank()) {
+        if (content == null || content.isBlank()) {
             throw new IllegalStateException("summary generation returned blank content");
         }
+        // 增量差异：把新增事实追加进已有摘要；首次则直接作为摘要
+        String summary = oldSummary.isEmpty() ? content : (oldSummary + "\n" + content).trim();
         // 限制摘要长度，防止运行摘要无限膨胀
         if (summary.length() > maxSummaryChars) {
             summary = summary.substring(0, maxSummaryChars) + "…";
