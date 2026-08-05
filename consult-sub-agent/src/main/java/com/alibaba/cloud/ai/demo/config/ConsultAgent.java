@@ -19,6 +19,7 @@ package com.alibaba.cloud.ai.demo.config;
 import com.alibaba.cloud.ai.agent.nacos.NacosAgentPromptBuilderFactory;
 import com.alibaba.cloud.ai.agent.nacos.NacosOptions;
 import com.alibaba.cloud.ai.common.node.ContextCompressionNode;
+import com.alibaba.cloud.ai.common.node.IncrementalContextCompressionNode;
 import com.alibaba.cloud.ai.common.node.MemoryInjectNode;
 import com.alibaba.cloud.ai.demo.tools.ConsultTools;
 import com.alibaba.cloud.ai.graph.CompiledGraph;
@@ -189,6 +190,46 @@ public class ConsultAgent {
 		};
 
 		return new StateGraph("consult_agent_with_compression", factory)
+				.addNode("context_compress", node_async(compressionNode))
+				.addNode("react_agent", node_async(state -> {
+					Map<String, Object> agentInput = new HashMap<>();
+					agentInput.put("messages", state.value("messages").orElse(List.of()));
+					return reactAgent.getCompiledGraph().invoke(agentInput)
+					.map(com.alibaba.cloud.ai.graph.OverAllState::data)
+					.orElse(Map.of());
+				}))
+				.addEdge(START, "context_compress")
+				.addEdge("context_compress", "react_agent")
+				.addEdge("react_agent", END)
+				.compile();
+	}
+
+	/**
+	 * 增量滚动摘要 + 工具结果压缩 Graph（滑动窗口方案的替代实现）。
+	 *
+	 * <p>在 ReactAgent 前置 {@link IncrementalContextCompressionNode}：
+	 * 运行摘要持久化在 state（{@code context_summary} 键），触发时仅把
+	 * "已有摘要 + 至多 compressBatch 条新消息"合并为更新摘要（单次调用输入有上界），
+	 * 并对超长工具返回做首尾截断。
+	 *
+	 * <p>通过 Debug 接口 {@code ?mode=incremental-compress} 触发。
+	 */
+	@Bean("consultAgentWithIncrementalCompression")
+	public CompiledGraph consultAgentWithIncrementalCompression(
+			@Qualifier("consultSubAgentBean") ReactAgent reactAgent,
+			@Qualifier("dashscopeChatModel") ChatModel chatModel) throws Exception {
+
+		ChatClient chatClient = ChatClient.builder(chatModel).build();
+		IncrementalContextCompressionNode compressionNode = new IncrementalContextCompressionNode(chatClient);
+
+		KeyStrategyFactory factory = () -> {
+			HashMap<String, KeyStrategy> m = new HashMap<>();
+			m.put("messages", new ReplaceStrategy());
+			m.put(IncrementalContextCompressionNode.SUMMARY_KEY, new ReplaceStrategy());
+			return m;
+		};
+
+		return new StateGraph("consult_agent_with_incremental_compression", factory)
 				.addNode("context_compress", node_async(compressionNode))
 				.addNode("react_agent", node_async(state -> {
 					Map<String, Object> agentInput = new HashMap<>();

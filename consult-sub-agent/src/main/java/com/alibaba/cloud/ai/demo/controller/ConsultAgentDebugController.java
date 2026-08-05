@@ -53,16 +53,21 @@ public class ConsultAgentDebugController {
     @Qualifier("consultAgentWithCompression")
     private CompiledGraph consultAgentWithCompression;
 
+    @Autowired(required = false)
+    @Qualifier("consultAgentWithIncrementalCompression")
+    private CompiledGraph consultAgentWithIncrementalCompression;
+
     public ConsultAgentDebugController(@Qualifier("consultSubAgentBean") ReactAgent consultSubAgent) {
         this.consultSubAgent = consultSubAgent;
     }
 
     /**
-     * Debug 接口，支持三种运行模式：
+     * Debug 接口，支持四种运行模式：
      * <ul>
      *   <li>{@code mode=react}（默认）：标准 ReactAgent，启用 MemorySaver Checkpoint</li>
      *   <li>{@code mode=memory}：带 Memory 主动注入的 StateGraph（MemoryInjectNode + ReactAgent）</li>
      *   <li>{@code mode=compress}：带滑动窗口压缩的 StateGraph（ContextCompressionNode + ReactAgent）</li>
+     *   <li>{@code mode=incremental-compress}：带增量滚动摘要 + 工具结果压缩的 StateGraph（IncrementalContextCompressionNode + ReactAgent）</li>
      * </ul>
      */
     @RequestMapping(path="/debug", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
@@ -82,6 +87,9 @@ public class ConsultAgentDebugController {
         } else if ("compress".equals(mode) && consultAgentWithCompression != null) {
             logger.info("Debug mode: context compression (chat_id={})", chatId);
             graph = consultAgentWithCompression;
+        } else if ("incremental-compress".equals(mode) && consultAgentWithIncrementalCompression != null) {
+            logger.info("Debug mode: incremental compression + tool-result compression (chat_id={})", chatId);
+            graph = consultAgentWithIncrementalCompression;
         } else {
             logger.info("Debug mode: react (checkpoint enabled, chat_id={})", chatId);
             graph = consultSubAgent.getAndCompileGraph();
