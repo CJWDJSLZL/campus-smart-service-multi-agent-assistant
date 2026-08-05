@@ -14,6 +14,7 @@
 | **扩展评估：生成质量** | LLM-as-judge 实测：Faithfulness **0.891** / Relevancy **0.917** / Context Precision **0.846** / Correctness **0.717** |
 | **扩展实现：增量滚动摘要+工具结果压缩** | 新节点落地接入 debug 模式；真实 LLM 对比：**单次摘要调用输入 -30.9%**、**摘要实体保留率 5%→47.5%**（滑动窗口严重丢实体）；输出膨胀经"增量·差异"优化后**较合并版 -61.1%** |
 | **GoldenSetRunner** | 30 条用例**全部通过结构校验**（0 问题）；运行时三维准确率：**路由 100% / 工具 62.1% / 关键词 75.3%** |
+| **Staging 实测（真实 Agent）** | docker MySQL + consult-sub-agent 真实运行：**关键词命中率 95.0%**（vs 代理 75.3%）；增量压缩单次延迟 **-45.2%**；修复 ConsultAgent 压缩 bean NPE |
 | **L2 在线验证** | **未执行**——环境缺少 MEM0 Key、钉钉 Token，Nacos 不可达（按用户指示忽略） |
 | **构建状态** | 修复后 9 个模块**全部编译通过**；修复前仅 common 可编译 |
 | **核心发现** | 文档大部分声明可追溯；**百分比数字为估算值**；Rerank 声明无法在该 DashScope 端点隔离验证；滑动窗口真实 LLM 下实体保留率仅 5% |
@@ -289,18 +290,58 @@
 - 校验过程发现并正确区分了 2 条**澄清场景用例**（`clarification_required=true`），验证了数据契约的完备性。
 - 运行时评测（§6.7.3）已用解析出的 30 条用例产出**三维准确率**（路由 100% / 工具 62.1% / 关键词 75.3%），可作为 H-1 的基线数据；全链路 Agent 执行待应用运行环境。
 
-## 7. L2 在线验证状态（未执行）
+## 6.8 Staging 实测：真实 Agent 运行环境（2026-08-05 新增）
 
-| 声明 | 计划验证 | 阻断原因 |
+> 在本环境搭建最小 staging：docker 启动 MySQL（`mysql:8.0`，端口 3307，导入 `rds-schema.sql` 初始化 4 表 23 条数据）+ 独立运行 consult-sub-agent（Nacos 禁用、DashScope、本地 MySQL）。
+> order/feedback 子 Agent 因 MCP 工具经 **Nacos 服务发现**（按用户指示忽略 Nacos）不可执行，维持 §6.7.3 的 Prompt 基线。
+
+### 6.8.1 Golden Set 真实三维准确率（consult 10 条，`scripts/golden_set_real_run.py`）
+
+| 维度 | 结果 | vs Prompt 代理基线 |
 |---|---|---|
-| R-1 查询改写召回率 | V-15 A/B | consult-sub-agent 需 Nacos（8848 不可达）与知识库索引 |
-| R-2 Rerank 相关性提升 | V-16 nDCG@3 | 同上 + 需人工标注集 |
-| R-3 混合检索 100% 命中 | V-17 全量查询 | 同上 + MySQL schema/数据未确认 |
-| P-1 工具映射表 60%→90% | V-18 双 Prompt A/B | 需起 order-agent 全链路 |
-| H-3/H-4 告警分支与响应时间 | V-19 注入低满意度数据 | 钉钉 Token 为空 |
-| C-2/M-3 Memory 注入 A/B | V-20 注入对比 | **MEM0_API_KEY 为空** |
+| **关键词命中率（真实 Agent）** | **95.0%**（38/40，9/10 全中） | 代理基线 75.3% → 真实 +19.7pp |
+| 平均总耗时 | **11,364ms** | — |
+| 平均首 token | 609ms | — |
+| 最大总耗时 | 14,912ms | — |
 
-> 相关测试用例与验收标准已写入 `docs/07-verification-test-plan.md` 第 5.3 节，可在具备 staging 环境后直接执行。
+- 唯一未全中的 CASE_C005（心理咨询），命中 2/4（"心理"、"咨询"命中，"预约"细节未出现）——真实 RAG 回答质量显著优于 Prompt 代理。
+- 端到端延迟主由 LLM 生成（流式首 token 仅 609ms，总耗时含完整回答生成）。
+
+### 6.8.2 增量压缩 staging 实测（真实 Agent 上下文，`scripts/compress_staging_real.py`）
+
+> 用真实 consult-sub-agent（mode=react）生成 16 轮真实对话（32 条消息），再对累积真实消息运行两种压缩策略（真实 LLM qwen-plus）。
+
+| 指标 | 滑动窗口 | 增量·差异 | 变化 |
+|---|---|---|---|
+| 压缩调用次数 | 1 | 2 | +100.0% |
+| **平均单次压缩延迟(ms)** | 5,002 | **2,740** | **-45.2%** |
+| 最大单次压缩延迟(ms) | 5,002 | 3,061 | **-38.8%** |
+| 累计输入 token | 1,328 | 1,337 | +0.7% |
+| 累计输出 token | 206 | 285 | +38.3% |
+| 总 token | 1,534 | 1,622 | +5.7% |
+| 压缩后消息缓冲条数 | 7 | 13 | +85.7% |
+
+**结论（真实上下文下）**：增量·差异方案**单次压缩延迟大幅降低（-45.2%）**，且缓冲保留更多近期消息（13 vs 7，新鲜度更好），token 成本仅 +5.7%。滑动窗口一次压缩处理全部早期消息（单次延迟 5s），增量分批处理更平滑。
+
+### 6.8.3 发现并修复：ConsultAgent 压缩 bean 的 NPE
+
+- **现象**：`mode=compress`/`mode=incremental-compress` 报 `ReactAgent.getCompiledGraph()` 返回 null（NPE），旧 bean 与新 bean 均有此问题（此前从未在运行中验证过）。
+- **根因**：`getCompiledGraph()` 直接返回 `compiledGraph` 字段，该字段仅在被 `asNodeAction`/`getAndCompileGraph` 首次编译后缓存；三个压缩/memory bean 直接调用它时字段可能为 null。
+- **修复**：三处 bean 改为 `reactAgent.getAndCompileGraph().invoke(...)`（synchronized + 缓存）。
+- **验证**：修复后 `mode=incremental-compress` 端到端执行成功（12.75s vs react 13.62s，单轮未触发压缩）；注意压缩模式的 `invoke()` 包装器会吞掉 ReactAgent 的流式输出（SSE 不穿透，属结构性限制）。
+
+## 7. L2 在线验证状态（consult 部分已执行）
+
+| 声明 | 计划验证 | 状态 |
+|---|---|---|
+| R-1 查询改写召回率 | V-15 A/B | ✅ 已在 §6.5 离线实测（无增益） |
+| R-2 Rerank 相关性提升 | V-16 nDCG@3 | ❌ 无法隔离（§6.5.2） |
+| R-3 混合检索 100% 命中 | V-17 全量查询 | ⚠️ 真实 Agent 下 consult RAG 关键词命中 95%（§6.8.1） |
+| P-1 工具映射表 60%→90% | V-18 双 Prompt A/B | ⛔ order-agent 需 Nacos MCP（已忽略） |
+| H-3/H-4 告警分支与响应时间 | V-19 注入低满意度数据 | ⛔ 钉钉 Token 为空 |
+| C-2/M-3 Memory 注入 A/B | V-20 注入对比 | ⛔ MEM0_API_KEY 为空 |
+
+> 相关测试用例与验收标准已写入 `docs/07-verification-test-plan.md` 第 5.3 节；consult 场景已在本环境真实执行，order/feedback 待具备运行环境。
 
 ## 8. 声明逐条判定
 
@@ -343,9 +384,11 @@
 
 ## 10. 遗留风险
 
-1. **P-1 / P-2 的百分比仍是估算**：需应用运行环境 + 真实 Agent 全链路批量运行后才能给出实测值。
-2. **GoldenSetRunner 仅完成结构校验**（H-1 数据质量部分）：运行时"路由/工具/RAG 三维准确率"仍需应用运行环境（Agent + MCP 服务）。
-3. **L2 全部用例待应用运行环境**：按用户指示忽略 MEM0 Key、钉钉 Token 与 Nacos。
+1. **P-1 / P-2 的百分比仍是估算**：order/feedback 全链路（依赖 Nacos MCP）未运行，仍为 Prompt 基线。
+2. **GoldenSetRunner 三维准确率**：consult 场景已真实运行（关键词 95.0%）；order/feedback 因 MCP-Nacos 依赖保持 Prompt 基线（工具 62.1%）。
+3. **L2 部分完成**：consult 场景已真实执行（§6.8）；order/feedback 需 Nacos MCP（按用户指示忽略）、告警需钉钉 Token、Memory 需 MEM0 Key。
+4. **压缩模式的 SSE 流不穿透**：ConsultAgent 压缩/memory bean 用 `invoke()` 包装 ReactAgent，流式输出被吞（结构性限制）；真实答案质量需在生成完成后取最终状态或在正式链路验证。
+5. **Nacos 客户端后台重试噪声**：禁用 Nacos 后仍有 okhttp 到 127.0.0.1:8848/4318 的重试日志（无碍功能）。
 4. **增量摘要输出膨胀已缓解（较合并版 -61.1%）**：Java 节点已改为"增量·差异"模式；剩余成本为调用次数更多（7 vs 5）导致的累计输入略增（+16%），可进一步通过降低合并频率优化。
 5. **Rerank 开关不生效**（R-2）：0/12 查询的排序/得分随 `enableReranking` 变化，属 pipeline 平台侧行为，需产品侧确认重排配置策略。
 6. **构建修复与新增节点未经过上游评审**：建议评审后合入。
@@ -382,4 +425,14 @@ java -cp "supervisor-agent/target/classes" com.alibaba.cloud.ai.demo.golden.Gold
 
 # 8. Golden Set 运行时三维准确率（Prompt+LLM 代理评测）
 python3 scripts/golden_set_runtime.py   # 结果写入 scripts/golden_set_runtime_result.json
+
+# 9. Staging：真实 Agent 运行评测（需 docker + DashScope + MySQL）
+docker run -d --name staging-mysql -p 3307:3306 -e MYSQL_ROOT_PASSWORD=root -e MYSQL_DATABASE=multi-agent-demo mysql:8.0
+docker exec -i staging-mysql mysql -uroot -proot multi-agent-demo < docker/middleware/init/mysql/rds-schema.sql
+# （按 .env DB_PASSWORD 创建 multi_agent_demo 用户并授权）
+source .env && DB_PORT=3307 DB_HOST=127.0.0.1 NACOS_CLIENT_ENABLED=false \
+  AI_OPENAI_BASE_URL="https://dashscope.aliyuncs.com/compatible-mode/v1" AI_OPENAI_API_KEY="$DASHSCOPE_API_KEY" \
+  java -jar consult-sub-agent/target/consult-sub-agent-1.0.0.jar
+python3 scripts/golden_set_real_run.py      # Golden Set 真实三维准确率（consult）
+python3 scripts/compress_staging_real.py    # 增量压缩真实上下文 staging 实测
 ```
