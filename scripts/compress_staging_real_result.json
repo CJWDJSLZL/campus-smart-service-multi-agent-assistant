@@ -1,0 +1,22 @@
+{
+  "turns": 16,
+  "sliding_window": {
+    "calls": 1,
+    "latencies": [
+      5002.082586288452
+    ],
+    "in": 1328,
+    "out": 206,
+    "final_msgs": 7
+  },
+  "incremental_diff": {
+    "calls": 2,
+    "latencies": [
+      3061.418056488037,
+      2418.8199043273926
+    ],
+    "in": 1337,
+    "out": 285,
+    "final_msgs": 13
+  }
+}

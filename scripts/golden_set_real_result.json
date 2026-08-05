@@ -1,0 +1,158 @@
+{
+  "mode": "react",
+  "total": 10,
+  "keyword_accuracy": 95.0,
+  "avg_total_ms": 11364,
+  "avg_first_token_ms": 609,
+  "max_total_ms": 14912.59503364563,
+  "details": [
+    {
+      "id": "CASE_C001",
+      "input": "奖学金怎么申请？",
+      "keywords_hit": [
+        "申请",
+        "材料",
+        "条件",
+        "流程"
+      ],
+      "keywords_total": 4,
+      "kw_ok": true,
+      "total_ms": 14913,
+      "first_ms": 642,
+      "answer_len": 1306
+    },
+    {
+      "id": "CASE_C002",
+      "input": "转专业需要什么条件？",
+      "keywords_hit": [
+        "条件",
+        "成绩",
+        "申请",
+        "教务"
+      ],
+      "keywords_total": 4,
+      "kw_ok": true,
+      "total_ms": 14320,
+      "first_ms": 656,
+      "answer_len": 1179
+    },
+    {
+      "id": "CASE_C003",
+      "input": "图书馆研讨间有什么预约规则？",
+      "keywords_hit": [
+        "预约",
+        "时间",
+        "人数",
+        "校园卡"
+      ],
+      "keywords_total": 4,
+      "kw_ok": true,
+      "total_ms": 11522,
+      "first_ms": 583,
+      "answer_len": 858
+    },
+    {
+      "id": "CASE_C004",
+      "input": "在读证明用来做什么？",
+      "keywords_hit": [
+        "实习",
+        "签证",
+        "竞赛",
+        "线上"
+      ],
+      "keywords_total": 4,
+      "kw_ok": true,
+      "total_ms": 8801,
+      "first_ms": 564,
+      "answer_len": 642
+    },
+    {
+      "id": "CASE_C005",
+      "input": "困难生认定需要哪些材料？",
+      "keywords_hit": [
+        "调查表",
+        "证明"
+      ],
+      "keywords_total": 4,
+      "kw_ok": false,
+      "total_ms": 10293,
+      "first_ms": 463,
+      "answer_len": 838
+    },
+    {
+      "id": "CASE_C006",
+      "input": "课程退选什么时候截止？",
+      "keywords_hit": [
+        "退课",
+        "截止",
+        "补退选",
+        "开学"
+      ],
+      "keywords_total": 4,
+      "kw_ok": true,
+      "total_ms": 7775,
+      "first_ms": 518,
+      "answer_len": 500
+    },
+    {
+      "id": "CASE_C007",
+      "input": "校园卡丢了怎么办？",
+      "keywords_hit": [
+        "挂失",
+        "补办",
+        "校园卡中心",
+        "工本费"
+      ],
+      "keywords_total": 4,
+      "kw_ok": true,
+      "total_ms": 9007,
+      "first_ms": 651,
+      "answer_len": 627
+    },
+    {
+      "id": "CASE_C008",
+      "input": "宿舍报修流程是什么？",
+      "keywords_hit": [
+        "报修",
+        "后勤",
+        "宿舍",
+        "故障"
+      ],
+      "keywords_total": 4,
+      "kw_ok": true,
+      "total_ms": 12968,
+      "first_ms": 459,
+      "answer_len": 963
+    },
+    {
+      "id": "CASE_C009",
+      "input": "有哪些校园服务可以预约？",
+      "keywords_hit": [
+        "图书馆",
+        "心理咨询",
+        "体育馆",
+        "宿舍报修"
+      ],
+      "keywords_total": 4,
+      "kw_ok": true,
+      "total_ms": 9999,
+      "first_ms": 735,
+      "answer_len": 828
+    },
+    {
+      "id": "CASE_C010",
+      "input": "社团活动场地怎么申请？",
+      "keywords_hit": [
+        "场地",
+        "申请",
+        "学生工作处",
+        "提前"
+      ],
+      "keywords_total": 4,
+      "kw_ok": true,
+      "total_ms": 14045,
+      "first_ms": 816,
+      "answer_len": 1264
+    }
+  ]
+}
