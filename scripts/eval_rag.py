@@ -104,7 +104,9 @@ def retrieve(query, rerank=True, top_k=3):
     for n in nodes:
         node = n.get("node", {})
         md = node.get("metadata", {})
-        out.append({"content": node.get("content", ""), "title": md.get("title", ""),
+        # 注意：pipeline retrieve 返回的分块文本字段是 text（部分版本为 content）
+        chunk_text = node.get("text") or node.get("content") or ""
+        out.append({"content": chunk_text, "title": md.get("title", ""),
                     "score": md.get("_score", 0.0)})
     return out[:top_k], dt, resp.get("rerank", "?")
 

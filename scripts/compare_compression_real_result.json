@@ -1,0 +1,23 @@
+{
+  "model": "qwen-plus",
+  "turns": 40,
+  "batch": 10,
+  "sliding_window": {
+    "calls": 5,
+    "max_prompt": 2240,
+    "total_in": 7714,
+    "total_out": 397,
+    "final_msgs": 18,
+    "summary": "用户为学生，已连续办理32次奖学金申请（CAMPUS_1000至CAMPUS_1032），每次均基于“GPA达标+材料提交”条件自动完成；所有办理均明确标注“时间偏好晚上”；最新一次（第32轮）办理记录编号为CAMPUS_1032。",
+    "entity_recall_pct": 5.0
+  },
+  "incremental": {
+    "calls": 7,
+    "max_prompt": 1595,
+    "total_in": 8913,
+    "total_out": 2669,
+    "final_msgs": 19,
+    "summary": "【更新后摘要】  \n用户连续三十二轮（第0轮至第31轮）询问“奖学金申请条件和办理流程步骤”，每次均获得一致答复：需GPA达标并提交材料；且每次均确认已为用户办理，对应唯一标识分别为：  \nCAMPUS_1000、CAMPUS_1001、CAMPUS_1002、CAMPUS_1003、CAMPUS_1004、CAMPUS_1005、CAMPUS_1006、CAMPUS_1007、CAMPUS_1008、CAMPUS_1009、CAMPUS_1010、CAMPUS_1011、CAMPUS_1012、CAMPUS_1013、CAMPUS_1014、CAMPUS_1015、CAMPUS_1016、CAMPUS_1017、CAMPUS_1018、CAMPUS_1019、CAMPUS_1020、CAMPUS_1021、CAMPUS_1022、CAMPUS_1023、CAMPUS_1024、CAMPUS_1025、CAMPUS_1026、CAMPUS_1027、CAMPUS_1028、CAMPUS_1029、CAMPUS_1030、CAMPUS_1031；  \n所有轮次中用户明确表达的时间偏好均为“晚上”；  \n第19–22轮的办理记录已通过工具明确验证：CAMPUS_1019为第19轮合法编号，且系统返回的办理记录详情中唯一有效预约编号为CAMPUS_1019（其余重复冗余字段为系统输出噪声…",
+    "entity_recall_pct": 80.0
+  }
+}
